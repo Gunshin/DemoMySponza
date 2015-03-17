@@ -1,0 +1,12 @@
+/external
+
+/demo/*
+
+!*.glsl
+
+DemoMySponza/Debug
+
+*.opensdf
+*.sdf
+*.suo
+*.nvuser
