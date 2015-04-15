@@ -10,6 +10,8 @@
 
 glm::vec3 ConvVec3(tsl::Vector3 &vec_);
 
+//$(SolutionDir)demo\
+
 MyView::
 MyView()
 {
@@ -190,11 +192,11 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
         glBufferData(GL_SHADER_STORAGE_BUFFER, size, scene_->getAllDirectionalLights().data(), GL_STATIC_DRAW);
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, bufferDirectionalLights);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, bufferDirectionalLights);
         glShaderStorageBlockBinding(
             globalLightProgram.getProgramID(),
             glGetUniformBlockIndex(globalLightProgram.getProgramID(), "BufferLights"),
-            0);
+            2);
     }
 
     //load scene meshes
@@ -752,37 +754,37 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     }
     backgroundTimer->End(backgroundTimeID);
 
-    //int globalLightTimeID = globalLightsTimer->Start();
-    //// global lights
-    //{
-    //    globalLightProgram.useProgram();
-    //    //glBindFramebuffer(GL_FRAMEBUFFER, lbufferFBO);
+    int globalLightTimeID = globalLightsTimer->Start();
+    // global lights
+    {
+        globalLightProgram.useProgram();
+        //glBindFramebuffer(GL_FRAMEBUFFER, lbufferFBO);
 
-    //    glDisable(GL_DEPTH_TEST); // disable depth test snce we are drawing a full screen quad
-    //    glDisable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST); // disable depth test snce we are drawing a full screen quad
+        glDisable(GL_BLEND);
 
-    //    glEnable(GL_STENCIL_TEST);
-    //    glStencilFunc(GL_NOTEQUAL, 0, ~0);
-    //    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_NOTEQUAL, 0, ~0);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-    //    // could remove the glGetUniformLocation, but again, being lazy and fps is still around 100 - 105
-    //    glActiveTexture(GL_TEXTURE0);
-    //    glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[0]);
-    //    glUniform1i(glGetUniformLocation(globalLightProgram.getProgramID(), "sampler_world_position"), 0);
+        // could remove the glGetUniformLocation, but again, being lazy and fps is still around 100 - 105
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[0]);
+        glUniform1i(glGetUniformLocation(globalLightProgram.getProgramID(), "sampler_world_position"), 0);
 
-    //    glActiveTexture(GL_TEXTURE1);
-    //    glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[1]);
-    //    glUniform1i(glGetUniformLocation(globalLightProgram.getProgramID(), "sampler_world_normal"), 1);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[1]);
+        glUniform1i(glGetUniformLocation(globalLightProgram.getProgramID(), "sampler_world_normal"), 1);
 
-    //    glActiveTexture(GL_TEXTURE2);
-    //    glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[2]);
-    //    glUniform1i(glGetUniformLocation(globalLightProgram.getProgramID(), "sampler_world_mat"), 2);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[2]);
+        glUniform1i(glGetUniformLocation(globalLightProgram.getProgramID(), "sampler_world_mat"), 2);
 
-    //    // draw directional light
-    //    glBindVertexArray(globalLightMesh.vao);
-    //    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-    //}
-    //globalLightsTimer->End(globalLightTimeID);
+        // draw directional light
+        glBindVertexArray(globalLightMesh.vao);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+    }
+    globalLightsTimer->End(globalLightTimeID);
 
     int lbufferTimeID = lbufferTimer->Start();
     // lets draw the lights
@@ -881,19 +883,6 @@ void MyView::SetBuffer(glm::mat4 projectMat_, glm::vec3 camPos_)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferRender);
     glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize * 4, buffer, GL_STREAM_DRAW);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-
-    // update the render buffer, so get the pointer!
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferRender);
-    GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-    float readBuffer[19];
-    memcpy(readBuffer, p, bufferSize * 4);
-
-    //memcpy(p, buffer, bufferSize);
-    ////done
-    //glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
-    delete[] buffer;
 }
 
 // some lights may be static, in any case, both static and dynamic are together

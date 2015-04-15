@@ -6,7 +6,7 @@ struct DirectionalLight
     vec3 intensity;
 };
 
-layout(std140, binding = 0) buffer BufferLights
+layout(std140, binding = 2) buffer BufferLights
 {
     DirectionalLight lights[];
 };
