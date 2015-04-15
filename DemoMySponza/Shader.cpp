@@ -64,7 +64,6 @@ bool Shader::loadShader(std::string file_, int type_)
             free(compiler_log);
         }
 
-        return false;
     }
 
     type = type_;

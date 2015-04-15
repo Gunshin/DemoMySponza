@@ -29,14 +29,14 @@ void main(void)
     vec3 normal = texelFetch(sampler_world_normal, pixelCoord).xyz;
     vec3 mat = texelFetch(sampler_world_mat, pixelCoord).xyz;
 
-    for(int i = 0; i < lights.length; ++i)
+    reflected_light = vec3(0,0,0);
+
+    for(int i = 0; i < lights.length(); ++i)
     {
         vec3 directionalLightColour = AddDirectionalLight(-directional_light, light_intensity, normal);
 
         reflected_light += directionalLightColour * mat;
     }
-
-
     
 }
 

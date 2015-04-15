@@ -867,23 +867,31 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 void MyView::SetBuffer(glm::mat4 projectMat_, glm::vec3 camPos_)
 {
     // so since glMapBufferRange does not work, i am going to create a temporary buffer for the per model data, and then copy the full buffer straight into the shaders buffer
-    unsigned int bufferSize = sizeof(projectMat_)+sizeof(camPos_);
-    char* buffer = new char[bufferSize];
-    unsigned int index = 0;
+    //unsigned int bufferSize = sizeof(projectMat_)+sizeof(camPos_);
+    //char* buffer = new char[bufferSize];
+    unsigned int bufferSize = 19;
+    float buffer[19];
 
     //projection matrix first!
-    memcpy(buffer + index, glm::value_ptr(projectMat_), sizeof(glm::mat4));
-    index += sizeof(projectMat_);
+    memcpy(buffer, glm::value_ptr(projectMat_), sizeof(glm::mat4));
 
     // camera position next!
-    memcpy(buffer + index, glm::value_ptr(camPos_), sizeof(camPos_));
+    memcpy(buffer + 16, glm::value_ptr(camPos_), sizeof(camPos_));
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferRender);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize * 4, buffer, GL_STREAM_DRAW);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
 
     // update the render buffer, so get the pointer!
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferRender);
-    GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-    memcpy(p, buffer, bufferSize);
-    //done
-    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
+    float readBuffer[19];
+    memcpy(readBuffer, p, bufferSize * 4);
+
+    //memcpy(p, buffer, bufferSize);
+    ////done
+    //glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 
     delete[] buffer;
 }
