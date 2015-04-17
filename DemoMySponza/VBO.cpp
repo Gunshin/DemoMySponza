@@ -32,6 +32,11 @@ GLuint VBO::GetVBOID() const
     return bufferID;
 }
 
+void VBO::SetSize(const unsigned int size_)
+{
+	size = size_;
+}
+
 unsigned int VBO::GetSize() const
 {
     return size;

@@ -12,7 +12,7 @@ bool MeshBuffer::GenerateBuffers()
     return true;
 }
 
-const MeshBuffer::Mesh MeshBuffer::AddMesh(tsl::IndexedMesh mesh_)
+const MeshBuffer::Mesh MeshBuffer::AddMesh(const tsl::IndexedMesh &mesh_)
 {
     Mesh newMesh;
 
@@ -44,7 +44,7 @@ const MeshBuffer::Mesh MeshBuffer::AddMesh(tsl::IndexedMesh mesh_)
     return newMesh;
 }
 
-const MeshBuffer::Mesh MeshBuffer::AddMesh(SceneModel::Mesh mesh_)
+const MeshBuffer::Mesh MeshBuffer::AddMesh(const SceneModel::Mesh &mesh_)
 {
     Mesh mesh;
     mesh.startVerticeIndex = vertices.size();
@@ -75,6 +75,34 @@ const MeshBuffer::Mesh MeshBuffer::AddMesh(SceneModel::Mesh mesh_)
     meshes.push_back(mesh);
 
     return mesh;
+}
+
+const MeshBuffer::Mesh MeshBuffer::AddMesh(const std::vector<glm::vec3> &positions_, const std::vector<glm::vec3> &normals_, const std::vector<unsigned int> &elements_)
+{
+
+	Mesh mesh;
+	mesh.startVerticeIndex = vertices.size();
+	mesh.startElementIndex = elements.size();
+
+	for (unsigned int j = 0; j < positions_.size(); ++j)
+	{
+		vertices.push_back(Vertex(positions_[j],
+			normals_[j]));
+	}
+
+	for (unsigned int j = 0; j < elements_.size(); ++j)
+	{
+		elements.push_back(elements_[j]);
+	}
+
+	mesh.endVerticeIndex = vertices.size() - 1;
+	mesh.endElementIndex = elements.size() - 1;
+	mesh.verticeCount = mesh.endVerticeIndex - mesh.startVerticeIndex;
+	mesh.element_count = mesh.endElementIndex - mesh.startElementIndex + 1;
+
+	meshes.push_back(mesh);
+
+	return mesh;
 }
 
 bool MeshBuffer::Flush()

@@ -19,6 +19,8 @@ public:
     bool FillData();
 
     GLuint GetVBOID() const;
+
+	void SetSize(const unsigned int size_);
     unsigned int GetSize() const;
 
 private:

@@ -39,8 +39,9 @@ public:
 
     bool GenerateBuffers();
 
-    const Mesh AddMesh(tsl::IndexedMesh mesh_);
-    const Mesh AddMesh(SceneModel::Mesh mesh_);
+	const Mesh AddMesh(const tsl::IndexedMesh &mesh_);
+	const Mesh AddMesh(const SceneModel::Mesh &mesh_);
+	const Mesh AddMesh(const std::vector<glm::vec3> &positions_, const std::vector<glm::vec3> &normals_, const std::vector<unsigned int> &elements_);
 
     bool Flush();
 
@@ -60,7 +61,7 @@ private:
 
 
     // method fixes damn inconsistencies of this so called 'legacy code'
-    inline glm::vec3 ConvVec3(tsl::Vector3 &vec_)
+    inline const glm::vec3 ConvVec3(const tsl::Vector3 &vec_) const
     {
         return glm::vec3(vec_.x, vec_.y, vec_.z);
     }

@@ -66,7 +66,6 @@ private:
         glm::mat4x3 positionData;
         GLint materialDataIndex;
     };
-    //std::vector< std::vector< InstanceData > > instanceData;
     std::vector< VBO> vboInstances;
 
     // cant get access to the MyScene::Light since we are only declaring MyScene as a class (no direct reference)
@@ -76,9 +75,8 @@ private:
         float range;
         glm::vec3 intensity;
     };
-    std::vector<PointLightData> pointLights;
-    GLuint bufferRender;
     MeshBuffer::Mesh pointLightMesh, globalLightMesh;
+	VBO vboPointLight;
 
     struct SpotLightData
     {
@@ -115,8 +113,6 @@ private:
 
     GLuint queryID;
 
-    void SetBuffer(glm::mat4 projectMat_, glm::vec3 camPos_);
-    void UpdatePointLights();
     void UpdateSpotLights();
 
     void GenerateShaderPrograms();

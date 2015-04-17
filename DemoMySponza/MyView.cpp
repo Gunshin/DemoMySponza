@@ -41,31 +41,14 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
     std::vector<SceneModel::Mesh> meshes = builder.getAllMeshes();
     GenerateMeshes(meshes);
 
-    //instanceData.resize(meshes.size());
-
-    /*for (unsigned int i = 0; i < meshes.size(); ++i)
-    {
-
-        std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(meshes[i].getId());
-        for (unsigned int j = 0; j < ids.size(); ++j)
-        {
-            InstanceData instance;
-            instance.positionData = scene_->getInstanceById(ids[j]).getTransformationMatrix();
-            instance.materialDataIndex = static_cast<GLint>(mapMaterialIndex[scene_->getInstanceById(ids[j]).getMaterialId()]);
-            instanceData[i].push_back(instance);
-        }
-
-    }*/
-
     vboInstances.resize(meshes.size());
-
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
 
-        SceneModel::Mesh m = meshes[i];
-        vboInstances[i] = VBO([this, m](GLuint bufferID_) -> bool
+		std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(meshes[i].getId());
+
+		vboInstances[i] = VBO([this, i, ids](GLuint bufferID_) -> bool
         {
-            std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(m.getId());
             std::vector<InstanceData> data;
             for (unsigned int j = 0; j < ids.size(); ++j)
             {
@@ -81,6 +64,8 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
                 data.data(),
                 GL_STATIC_DRAW);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+			vboInstances[i].SetSize(data.size());
 
             return true;
         });
@@ -129,13 +114,30 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
     // set up light vao since it uses a different channel layout
     {
-        glGenBuffers(1, &pointLightMesh.instanceVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, pointLightMesh.instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER,
-            pointLights.size() * sizeof(PointLightData),
-            pointLights.data(),
-            GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+		vboPointLight = VBO([this](GLuint bufferID_) -> bool
+		{
+			std::vector<SceneModel::PointLight> sceneLights = scene_->getAllPointLights();
+			std::vector<PointLightData> data;
+			data.resize(sceneLights.size());
+			for (unsigned int i = 0; i < sceneLights.size(); ++i)
+			{
+				PointLightData light;
+				light.position = sceneLights[i].getPosition();
+				light.range = sceneLights[i].getRange();
+				light.intensity = sceneLights[i].getIntensity();
+				data[i] = light;
+			}
+
+			glBindBuffer(GL_ARRAY_BUFFER, bufferID_);
+			glBufferData(GL_ARRAY_BUFFER,
+				data.size() * sizeof(PointLightData),
+				data.data(),
+				GL_STATIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+			return true;
+		});
+		vboPointLight.GenerateBuffer();
 
         unsigned int offset = 0;
 
@@ -155,7 +157,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
         offset += sizeof(glm::vec3);
 
         unsigned int instanceOffset = 0;
-        glBindBuffer(GL_ARRAY_BUFFER, pointLightMesh.instanceVBO);
+		glBindBuffer(GL_ARRAY_BUFFER, vboPointLight.GetVBOID());
 
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
@@ -180,6 +182,25 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
         glBindVertexArray(0);
 
     }
+
+	// finalise the square
+	{
+		glGenVertexArrays(1, &globalLightMesh.vao);
+		glBindVertexArray(globalLightMesh.vao);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
+		glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+			sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(0));
+
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+			sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(sizeof(glm::vec3)));
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
 
     glGenFramebuffers(1, &gbufferFBO);
     glGenRenderbuffers(1, &depthStencilRBO);
@@ -473,7 +494,6 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     postTimer->Check();
 
     int gbufferTimeID = gbufferTimer->Start();
-    //SetBuffer(projectionViewMatrix, scene_->getCamera().getPosition());
     renderSSBO.FillData();
     vboInstances[0].FillData();
 
@@ -529,7 +549,11 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
         // draw directional light
         glBindVertexArray(globalLightMesh.vao);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+			globalLightMesh.element_count,
+			GL_UNSIGNED_INT,
+			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+			globalLightMesh.startVerticeIndex);
     }
     backgroundTimer->End(backgroundTimeID);
 
@@ -561,7 +585,11 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
         // draw directional light
         glBindVertexArray(globalLightMesh.vao);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+			globalLightMesh.element_count,
+			GL_UNSIGNED_INT,
+			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+			globalLightMesh.startVerticeIndex);
     }
     globalLightsTimer->End(globalLightTimeID);
 
@@ -598,7 +626,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[2]);
         glUniform1i(glGetUniformLocation(lightProgram.getProgramID(), "sampler_world_mat"), 2);
 
-        UpdatePointLights();
+		vboPointLight.FillData();
 
         // instance draw the lights woop woop
         glBindVertexArray(pointLightMesh.vao);
@@ -606,7 +634,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
             pointLightMesh.element_count,
             GL_UNSIGNED_INT,
             TGL_BUFFER_OFFSET(pointLightMesh.startElementIndex * sizeof(int)),
-            pointLights.size(),
+            scene_->getAllPointLights().size(),
             pointLightMesh.startVerticeIndex);
 
         glDisable(GL_STENCIL_TEST);
@@ -634,7 +662,11 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glUniform1i(glGetUniformLocation(postProcessProgram.getProgramID(), "sampler_world_position"), 0);
 
         glBindVertexArray(globalLightMesh.vao);
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+			globalLightMesh.element_count,
+			GL_UNSIGNED_INT,
+			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+			globalLightMesh.startVerticeIndex);
     }
     postTimer->End(postProcessTimeID);
 
@@ -645,69 +677,28 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind the framebuffers
 }
 
-void MyView::SetBuffer(glm::mat4 projectMat_, glm::vec3 camPos_)
-{
-    // so since glMapBufferRange does not work, i am going to create a temporary buffer for the per model data, and then copy the full buffer straight into the shaders buffer
-    //unsigned int bufferSize = sizeof(projectMat_)+sizeof(camPos_);
-    //char* buffer = new char[bufferSize];
-    unsigned int bufferSize = 19;
-    float buffer[19];
-
-    //projection matrix first!
-    memcpy(buffer, glm::value_ptr(projectMat_), sizeof(glm::mat4));
-
-    // camera position next!
-    memcpy(buffer + 16, glm::value_ptr(camPos_), sizeof(camPos_));
-
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferRender);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize * 4, buffer, GL_STREAM_DRAW);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-}
-
-void MyView::UpdatePointLights()
-{
-    std::vector<SceneModel::PointLight> sceneLights = scene_->getAllPointLights();
-    pointLights.resize(sceneLights.size());
-    for (unsigned int i = 0; i < sceneLights.size(); ++i)
-    {
-        PointLightData light;
-        light.position = sceneLights[i].getPosition();
-        light.range = sceneLights[i].getRange();
-        light.intensity = sceneLights[i].getIntensity();
-        pointLights[i] = light;
-    }
-
-    glBindBuffer(GL_ARRAY_BUFFER, pointLightMesh.instanceVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-        pointLights.size() * sizeof(PointLightData),
-        pointLights.data(),
-        GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-
-void MyView::UpdateSpotLights()
-{
-    std::vector<SceneModel::SpotLight> sceneLights = scene_->getAllSpotLights();
-    spotLights.resize(sceneLights.size());
-    for (unsigned int i = 0; i < sceneLights.size(); ++i)
-    {
-        SpotLightData light;
-        light.position = sceneLights[i].getPosition();
-        light.coneAngleDegrees = sceneLights[i].getConeAngleDegrees();
-        light.direction = sceneLights[i].getDirection();
-        light.range = sceneLights[i].getRange();
-        light.intensity = sceneLights[i].getIntensity();
-        spotLights[i] = light;
-    }
-
-    glBindBuffer(GL_ARRAY_BUFFER, spotLightMesh.instanceVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-        spotLights.size() * sizeof(SpotLightData),
-        spotLights.data(),
-        GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
+//void MyView::UpdateSpotLights()
+//{
+//    std::vector<SceneModel::SpotLight> sceneLights = scene_->getAllSpotLights();
+//    spotLights.resize(sceneLights.size());
+//    for (unsigned int i = 0; i < sceneLights.size(); ++i)
+//    {
+//        SpotLightData light;
+//        light.position = sceneLights[i].getPosition();
+//        light.coneAngleDegrees = sceneLights[i].getConeAngleDegrees();
+//        light.direction = sceneLights[i].getDirection();
+//        light.range = sceneLights[i].getRange();
+//        light.intensity = sceneLights[i].getIntensity();
+//        spotLights[i] = light;
+//    }
+//
+//    glBindBuffer(GL_ARRAY_BUFFER, spotLightMesh.instanceVBO);
+//    glBufferData(GL_ARRAY_BUFFER,
+//        spotLights.size() * sizeof(SpotLightData),
+//        spotLights.data(),
+//        GL_STATIC_DRAW);
+//    glBindBuffer(GL_ARRAY_BUFFER, 0);
+//}
 
 // method fixes damn inconsistencies of this so called 'legacy code'
 inline glm::vec3 ConvVec3(tsl::Vector3 &vec_)
@@ -904,35 +895,31 @@ void MyView::GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_)
         tsl::IndexedMesh mesh;
         tsl::CreateCone(1.f, 1.f, 12, &mesh);
         tsl::ConvertPolygonsToTriangles(&mesh);
-
         spotLightMesh = meshBuffer.AddMesh(mesh);
     }
 
-    meshBuffer.Flush();
+	// square mesh
+	{
+		std::vector<glm::vec3> vertices = {
+			glm::vec3(-1, -1, 0),
+			glm::vec3(1, -1, 0),
+			glm::vec3(1, 1, 0),
+			glm::vec3(-1, 1, 0)
+		};
 
-    // set up fullscreen quad. Doesnt use meshBuffer since it is set up in a different way.
-    {
-        std::vector<glm::vec2> vertices(4);
-        vertices[0] = glm::vec2(-1, -1);
-        vertices[1] = glm::vec2(1, -1);
-        vertices[2] = glm::vec2(1, 1);
-        vertices[3] = glm::vec2(-1, 1);
+		std::vector<glm::vec3> normals = {
+			glm::vec3(0, 0, -1),
+			glm::vec3(0, 0, -1),
+			glm::vec3(0, 0, -1),
+			glm::vec3(0, 0, -1)
+		};
 
-        glGenBuffers(1, &globalLightMesh.instanceVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, globalLightMesh.instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER,
-            vertices.size() * sizeof(glm::vec2),
-            vertices.data(),
-            GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+		std::vector<unsigned int> elements = {
+			0, 1, 2, 3
+		};
 
-        glGenVertexArrays(1, &globalLightMesh.vao);
-        glBindVertexArray(globalLightMesh.vao);
-        glBindBuffer(GL_ARRAY_BUFFER, globalLightMesh.instanceVBO);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-            sizeof(glm::vec2), 0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
+		globalLightMesh = meshBuffer.AddMesh(vertices, normals, elements);
     }
+
+	meshBuffer.Flush();
 }
