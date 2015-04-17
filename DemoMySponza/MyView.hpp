@@ -11,6 +11,7 @@
 #include "QueryTimer.hpp"
 #include "SSBO.hpp"
 #include "MeshBuffer.hpp"
+#include "VBO.hpp"
 
 class MyView : public tygra::WindowViewDelegate
 {
@@ -65,7 +66,8 @@ private:
         glm::mat4x3 positionData;
         GLint materialDataIndex;
     };
-    std::vector< std::vector< InstanceData > > instanceData;
+    //std::vector< std::vector< InstanceData > > instanceData;
+    std::vector< VBO> vboInstances;
 
     // cant get access to the MyScene::Light since we are only declaring MyScene as a class (no direct reference)
     struct PointLightData

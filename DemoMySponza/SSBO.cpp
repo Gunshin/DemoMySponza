@@ -10,10 +10,13 @@ SSBO::SSBO()
 SSBO::SSBO(std::function<bool(GLuint)> onFillData_)
 {
     onFillData = onFillData_;
+}
 
+bool SSBO::GenerateBuffer()
+{
     glGenBuffers(1, &bufferID);
 
-    FillData();
+    return FillData();
 }
 
 bool SSBO::AttachToProgram(const unsigned int channelID_, const ShaderProgram &program_, const std::string &bufferName_)

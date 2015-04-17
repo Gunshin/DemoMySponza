@@ -41,9 +41,9 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
     std::vector<SceneModel::Mesh> meshes = builder.getAllMeshes();
     GenerateMeshes(meshes);
 
-    instanceData.resize(meshes.size());
+    //instanceData.resize(meshes.size());
 
-    for (unsigned int i = 0; i < meshes.size(); ++i)
+    /*for (unsigned int i = 0; i < meshes.size(); ++i)
     {
 
         std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(meshes[i].getId());
@@ -55,17 +55,36 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
             instanceData[i].push_back(instance);
         }
 
-    }
+    }*/
+
+    vboInstances.resize(meshes.size());
 
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
-        glGenBuffers(1, &loadedMeshes[i].instanceVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, loadedMeshes[i].instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER,
-            instanceData[i].size() * sizeof(InstanceData),
-            instanceData[i].data(),
-            GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        SceneModel::Mesh m = meshes[i];
+        vboInstances[i] = VBO([this, m](GLuint bufferID_) -> bool
+        {
+            std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(m.getId());
+            std::vector<InstanceData> data;
+            for (unsigned int j = 0; j < ids.size(); ++j)
+            {
+                InstanceData instance;
+                instance.positionData = scene_->getInstanceById(ids[j]).getTransformationMatrix();
+                instance.materialDataIndex = static_cast<GLint>(mapMaterialIndex[scene_->getInstanceById(ids[j]).getMaterialId()]);
+                data.push_back(instance);
+            }
+
+            glBindBuffer(GL_ARRAY_BUFFER, bufferID_);
+            glBufferData(GL_ARRAY_BUFFER,
+                data.size() * sizeof(InstanceData),
+                data.data(),
+                GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            return true;
+        });
+        vboInstances[i].GenerateBuffer();
 
         unsigned int offset = 0;
 
@@ -85,7 +104,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
         offset += sizeof(glm::vec3);
 
         unsigned int instanceOffset = 0;
-        glBindBuffer(GL_ARRAY_BUFFER, loadedMeshes[i].instanceVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, vboInstances[i].GetVBOID());
 
         for (int a = 2; a < 6; ++a)
         {
@@ -456,6 +475,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     int gbufferTimeID = gbufferTimer->Start();
     //SetBuffer(projectionViewMatrix, scene_->getCamera().getPosition());
     renderSSBO.FillData();
+    vboInstances[0].FillData();
 
     // set up the depth and stencil buffers, we are not writing to the onscreen framebuffer, we are filling the relevant data for the light render
     {
@@ -483,7 +503,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
                 loadedMeshes[i].element_count,
                 GL_UNSIGNED_INT,
                 TGL_BUFFER_OFFSET(loadedMeshes[i].startElementIndex * sizeof(int)),
-                instanceData[i].size(),
+                vboInstances[i].GetSize(),
                 loadedMeshes[i].startVerticeIndex);
         }
 
@@ -801,6 +821,7 @@ void MyView::SetupSSBOS()
 
         return true;
     });
+    renderSSBO.GenerateBuffer();
     renderSSBO.AttachToProgram(0, firstPassProgram, "BufferRender");
     renderSSBO.AttachToProgram(0, lightProgram, "BufferRender");
 
@@ -828,6 +849,7 @@ void MyView::SetupSSBOS()
 
         return true;
     });
+    materialSSBO.GenerateBuffer();
     materialSSBO.AttachToProgram(1, firstPassProgram, "BufferMaterials");
 
 
@@ -851,6 +873,7 @@ void MyView::SetupSSBOS()
 
         return true;
     });
+    directionalLightsSSBO.GenerateBuffer();
     directionalLightsSSBO.AttachToProgram(2, globalLightProgram, "BufferLights");
 }
 
