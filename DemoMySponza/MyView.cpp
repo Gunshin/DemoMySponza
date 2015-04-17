@@ -18,7 +18,8 @@ MyView()
 }
 
 MyView::
-~MyView() {
+~MyView()
+{
 }
 
 void MyView::
@@ -32,278 +33,29 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 {
     assert(scene_ != nullptr);
 
+    GenerateShaderPrograms();
+
+    SetupSSBOS();
 
     SceneModel::GeometryBuilder builder = SceneModel::GeometryBuilder();
-
-    {
-        Shader vs, fs;
-        vs.loadShader("firstpass_vs.glsl", GL_VERTEX_SHADER);
-        fs.loadShader("firstpass_fs.glsl", GL_FRAGMENT_SHADER);
-
-        firstPassProgram.createProgram();
-        firstPassProgram.addShaderToProgram(&vs);
-        firstPassProgram.addShaderToProgram(&fs);
-
-        // set the channels of the output for this one to be sure
-        glBindFragDataLocation(firstPassProgram.getProgramID(), 0, "position");
-        glBindFragDataLocation(firstPassProgram.getProgramID(), 1, "normal");
-        glBindFragDataLocation(firstPassProgram.getProgramID(), 2, "material");
-
-        firstPassProgram.linkProgram();
-
-        firstPassProgram.useProgram();
-    }
-
-    {
-        Shader vs, fs;
-        vs.loadShader("background_vs.glsl", GL_VERTEX_SHADER);
-        fs.loadShader("background_fs.glsl", GL_FRAGMENT_SHADER);
-
-        backgroundProgram.createProgram();
-        backgroundProgram.addShaderToProgram(&vs);
-        backgroundProgram.addShaderToProgram(&fs);
-
-        backgroundProgram.linkProgram();
-
-        backgroundProgram.useProgram();
-    }
-
-    {
-        Shader vs, fs;
-        vs.loadShader("global_light_vs.glsl", GL_VERTEX_SHADER);
-        fs.loadShader("global_light_fs.glsl", GL_FRAGMENT_SHADER);
-
-        globalLightProgram.createProgram();
-        globalLightProgram.addShaderToProgram(&vs);
-        globalLightProgram.addShaderToProgram(&fs);
-
-        globalLightProgram.linkProgram();
-
-        globalLightProgram.useProgram();
-    }
-
-    {
-        Shader vs, fs;
-        vs.loadShader("light_vs.glsl", GL_VERTEX_SHADER);
-        fs.loadShader("light_fs.glsl", GL_FRAGMENT_SHADER);
-
-        lightProgram.createProgram();
-        lightProgram.addShaderToProgram(&vs);
-        lightProgram.addShaderToProgram(&fs);
-        lightProgram.linkProgram();
-
-        lightProgram.useProgram();
-    }
-
-    /*
-
-    preparation for future
-
-    */
-    {
-        Shader vs, fs;
-        vs.loadShader("postprocess_vs.glsl", GL_VERTEX_SHADER);
-        fs.loadShader("postprocess_fs.glsl", GL_FRAGMENT_SHADER);
-
-        postProcessProgram.createProgram();
-        postProcessProgram.addShaderToProgram(&vs);
-        postProcessProgram.addShaderToProgram(&fs);
-
-        postProcessProgram.linkProgram();
-
-        postProcessProgram.useProgram();
-    }
-
-    /*
-    generate a map which contains the MaterialID as the key, which leads to the index inside of my vector that the material is contained
-    */
-    auto mapMaterialIndex = std::map<SceneModel::MaterialId, unsigned int>();
-
-    for (unsigned int i = 0; i < scene_->getAllMaterials().size(); ++i)
-    {
-        mapMaterialIndex[scene_->getAllMaterials()[i].getId()] = materials.size();
-
-        MaterialData data;
-        data.colour = scene_->getAllMaterials()[i].getDiffuseColour();
-        data.shininess = scene_->getAllMaterials()[i].getShininess();
-        materials.push_back(data);
-    }
-
     std::vector<SceneModel::Mesh> meshes = builder.getAllMeshes();
+    GenerateMeshes(meshes);
+
     instanceData.resize(meshes.size());
 
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
 
         std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(meshes[i].getId());
-
         for (unsigned int j = 0; j < ids.size(); ++j)
         {
             InstanceData instance;
             instance.positionData = scene_->getInstanceById(ids[j]).getTransformationMatrix();
             instance.materialDataIndex = static_cast<GLint>(mapMaterialIndex[scene_->getInstanceById(ids[j]).getMaterialId()]);
             instanceData[i].push_back(instance);
-
         }
 
     }
-
-    {
-        // setup material SSBO
-        glGenBuffers(1, &bufferMaterials);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferMaterials);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialData)* materials.size(), &materials[0], GL_STREAM_DRAW);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, bufferMaterials);
-        glShaderStorageBlockBinding(
-            firstPassProgram.getProgramID(),
-            glGetUniformBlockIndex(firstPassProgram.getProgramID(), "BufferMaterials"),
-            1);
-    }
-
-    {
-        // set up light SSBO
-        glGenBuffers(1, &bufferRender);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferRender);
-        unsigned int size = sizeof(glm::mat4) + sizeof(glm::vec3); // since our buffer only has a projection matrix and camposition
-        glBufferData(GL_SHADER_STORAGE_BUFFER, size, NULL, GL_STREAM_DRAW);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-        // bind this buffer to both first pass program and light program since both require it
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, bufferRender);
-        glShaderStorageBlockBinding(
-            firstPassProgram.getProgramID(),
-            glGetUniformBlockIndex(firstPassProgram.getProgramID(), "BufferRender"),
-            0);
-
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, bufferRender);
-        glShaderStorageBlockBinding(
-            lightProgram.getProgramID(),
-            glGetUniformBlockIndex(lightProgram.getProgramID(), "BufferRender"),
-            0);
-    }
-
-    {
-        // set up directional light buffer
-        glGenBuffers(1, &bufferDirectionalLights);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferDirectionalLights);
-        unsigned int size = sizeof(glm::vec3) * 2 * scene_->getAllDirectionalLights().size(); // each directional light has a vec3 dimension and vec3 intensity
-        glBufferData(GL_SHADER_STORAGE_BUFFER, size, scene_->getAllDirectionalLights().data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, bufferDirectionalLights);
-        glShaderStorageBlockBinding(
-            globalLightProgram.getProgramID(),
-            glGetUniformBlockIndex(globalLightProgram.getProgramID(), "BufferLights"),
-            2);
-    }
-
-    //load scene meshes
-    std::vector<Vertex> vertices;
-    std::vector< unsigned int > elements;
-    for (unsigned int i = 0; i < meshes.size(); ++i)
-    {
-        Mesh mesh;
-        mesh.startVerticeIndex = vertices.size();
-        mesh.startElementIndex = elements.size();
-
-        // i store these temporarily since getPositionArray() will likely end up copying the whole array rather than passing the original
-        std::vector<glm::vec3> positionArray = meshes[i].getPositionArray();
-        std::vector<glm::vec3> normalArray = meshes[i].getNormalArray();
-
-        for (unsigned int j = 0; j < positionArray.size(); ++j)
-        {
-            vertices.push_back(Vertex(positionArray[j],
-                normalArray[j]));
-        }
-
-        // why is the element array a vector<InstanceId>?
-        std::vector<unsigned int> elementArray = meshes[i].getElementArray();
-        for (unsigned int j = 0; j < elementArray.size(); ++j)
-        {
-            elements.push_back(elementArray[j]);
-        }
-
-        mesh.endVerticeIndex = vertices.size() - 1;
-        mesh.endElementIndex = elements.size() - 1;
-        mesh.verticeCount = mesh.endVerticeIndex - mesh.startVerticeIndex;
-        mesh.element_count = mesh.endElementIndex - mesh.startElementIndex + 1;
-        loadedMeshes.push_back(mesh);
-    }
-
-    // set up light mesh
-    {
-        tsl::IndexedMesh mesh;
-        tsl::CreateSphere(1.f, 12, &mesh);
-        tsl::ConvertPolygonsToTriangles(&mesh);
-
-        lightMesh.startVerticeIndex = vertices.size();
-        lightMesh.startElementIndex = elements.size();
-
-        for (unsigned int j = 0; j < mesh.vertex_array.size(); ++j)
-        {
-            vertices.push_back(Vertex(
-                ConvVec3(mesh.vertex_array[j]),
-                ConvVec3(mesh.normal_array[j])
-                ));
-        }
-
-        // why is the element array a vector<InstanceId>?
-        std::vector<int> elementArray = mesh.index_array;
-        for (unsigned int j = 0; j < elementArray.size(); ++j)
-        {
-            elements.push_back(elementArray[j]);
-        }
-
-        lightMesh.endVerticeIndex = vertices.size() - 1;
-        lightMesh.endElementIndex = elements.size() - 1;
-        lightMesh.verticeCount = lightMesh.endVerticeIndex - lightMesh.startVerticeIndex;
-        lightMesh.element_count = lightMesh.endElementIndex - lightMesh.startElementIndex + 1;
-    }
-
-    // set up fullscreen quad
-    {
-        std::vector<glm::vec2> vertices(4);
-        vertices[0] = glm::vec2(-1, -1);
-        vertices[1] = glm::vec2(1, -1);
-        vertices[2] = glm::vec2(1, 1);
-        vertices[3] = glm::vec2(-1, 1);
-
-        glGenBuffers(1, &globalLightMesh.instanceVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, globalLightMesh.instanceVBO);
-        glBufferData(GL_ARRAY_BUFFER,
-            vertices.size() * sizeof(glm::vec2),
-            vertices.data(),
-            GL_STATIC_DRAW);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        glGenVertexArrays(1, &globalLightMesh.vao);
-        glBindVertexArray(globalLightMesh.vao);
-        glBindBuffer(GL_ARRAY_BUFFER, globalLightMesh.instanceVBO);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-            sizeof(glm::vec2), 0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-    }
-
-    // set up vao
-    glGenBuffers(1, &vertexVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-        vertices.size() * sizeof(Vertex),
-        vertices.data(),
-        GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glGenBuffers(1, &elementVBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementVBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-        elements.size() * sizeof(unsigned int),
-        elements.data(),
-        GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
@@ -319,17 +71,17 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
         glGenVertexArrays(1, &loadedMeshes[i].vao);
         glBindVertexArray(loadedMeshes[i].vao);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
+        glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-            sizeof(Vertex), TGL_BUFFER_OFFSET(offset));
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
         offset += sizeof(glm::vec3);
 
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-            sizeof(Vertex), TGL_BUFFER_OFFSET(offset));
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
         offset += sizeof(glm::vec3);
 
         unsigned int instanceOffset = 0;
@@ -358,45 +110,51 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
     // set up light vao since it uses a different channel layout
     {
-        glGenBuffers(1, &lightMesh.instanceVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, lightMesh.instanceVBO);
+        glGenBuffers(1, &pointLightMesh.instanceVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, pointLightMesh.instanceVBO);
         glBufferData(GL_ARRAY_BUFFER,
-            lights.size() * sizeof(LightData),
-            lights.data(),
+            pointLights.size() * sizeof(PointLightData),
+            pointLights.data(),
             GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         unsigned int offset = 0;
 
-        glGenVertexArrays(1, &lightMesh.vao);
-        glBindVertexArray(lightMesh.vao);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementVBO);
-        glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
+        glGenVertexArrays(1, &pointLightMesh.vao);
+        glBindVertexArray(pointLightMesh.vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
+        glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
 
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-            sizeof(Vertex), TGL_BUFFER_OFFSET(offset));
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
         offset += sizeof(glm::vec3);
 
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-            sizeof(Vertex), TGL_BUFFER_OFFSET(offset));
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
         offset += sizeof(glm::vec3);
 
         unsigned int instanceOffset = 0;
-        glBindBuffer(GL_ARRAY_BUFFER, lightMesh.instanceVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, pointLightMesh.instanceVBO);
 
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
-            sizeof(LightData), TGL_BUFFER_OFFSET(instanceOffset));
+            sizeof(PointLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(2, 1);
         instanceOffset += sizeof(glm::vec3);
 
         glEnableVertexAttribArray(3);
         glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE,
-            sizeof(LightData), TGL_BUFFER_OFFSET(instanceOffset));
+            sizeof(PointLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(3, 1);
         instanceOffset += sizeof(float);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE,
+            sizeof(PointLightData), TGL_BUFFER_OFFSET(instanceOffset));
+        glVertexAttribDivisor(4, 1);
+        instanceOffset += sizeof(glm::vec3);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
@@ -434,7 +192,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
         average /= gbufferTimes.size();
 
-        printf("gbuffer took: %llu\n", average);
+        //printf("gbuffer took: %llu\n", average);
     });
 
     backgroundTimes.resize(rollingAverage);
@@ -454,7 +212,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
         average /= backgroundTimes.size();
 
-        printf("background took: %llu\n", average);
+        //printf("background took: %llu\n", average);
     });
 
     globalLightsTimes.resize(rollingAverage);
@@ -474,7 +232,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
         average /= globalLightsTimes.size();
 
-        printf("globalLights took: %llu\n", average);
+        //printf("globalLights took: %llu\n", average);
     });
 
     lbufferTimes.resize(rollingAverage);
@@ -494,7 +252,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
         average /= lbufferTimes.size();
 
-        printf("lbuffer took: %llu\n", average);
+        //printf("lbuffer took: %llu\n", average);
     });
 
     postTimes.resize(rollingAverage);
@@ -514,15 +272,15 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
         average /= postTimes.size();
 
-        printf("post took: %llu\n", average);
+        //printf("post took: %llu\n", average);
     });
 
 }
 
 void MyView::
 windowViewDidReset(std::shared_ptr<tygra::Window> window,
-                   int width,
-                   int height)
+int width,
+int height)
 {
     glViewport(0, 0, width, height);
 
@@ -685,9 +443,9 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     GLint viewport_size[4];
     glGetIntegerv(GL_VIEWPORT, viewport_size);
 
-    glm::mat4 projectionMatrix = glm::perspective(75.f, aspectRatio, 1.f, 1000.f);
+    /*glm::mat4 projectionMatrix = glm::perspective(75.f, aspectRatio, 1.f, 1000.f);
     glm::mat4 viewMatrix = glm::lookAt(scene_->getCamera().getPosition(), scene_->getCamera().getDirection() + scene_->getCamera().getPosition(), glm::vec3(0, 1, 0));
-    glm::mat4 projectionViewMatrix = projectionMatrix * viewMatrix;
+    glm::mat4 projectionViewMatrix = projectionMatrix * viewMatrix;*/
 
     gbufferTimer->Check();
     backgroundTimer->Check();
@@ -696,7 +454,8 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     postTimer->Check();
 
     int gbufferTimeID = gbufferTimer->Start();
-    SetBuffer(projectionViewMatrix, scene_->getCamera().getPosition());
+    //SetBuffer(projectionViewMatrix, scene_->getCamera().getPosition());
+    renderSSBO.FillData();
 
     // set up the depth and stencil buffers, we are not writing to the onscreen framebuffer, we are filling the relevant data for the light render
     {
@@ -822,13 +581,13 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         UpdatePointLights();
 
         // instance draw the lights woop woop
-        glBindVertexArray(lightMesh.vao);
+        glBindVertexArray(pointLightMesh.vao);
         glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
-            lightMesh.element_count,
+            pointLightMesh.element_count,
             GL_UNSIGNED_INT,
-            TGL_BUFFER_OFFSET(lightMesh.startElementIndex * sizeof(int)),
-            lights.size(),
-            lightMesh.startVerticeIndex);
+            TGL_BUFFER_OFFSET(pointLightMesh.startElementIndex * sizeof(int)),
+            pointLights.size(),
+            pointLightMesh.startVerticeIndex);
 
         glDisable(GL_STENCIL_TEST);
         glDepthMask(GL_TRUE);
@@ -885,23 +644,47 @@ void MyView::SetBuffer(glm::mat4 projectMat_, glm::vec3 camPos_)
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
-// some lights may be static, in any case, both static and dynamic are together
 void MyView::UpdatePointLights()
 {
     std::vector<SceneModel::PointLight> sceneLights = scene_->getAllPointLights();
-    lights.resize(sceneLights.size());
+    pointLights.resize(sceneLights.size());
     for (unsigned int i = 0; i < sceneLights.size(); ++i)
     {
-        LightData light;
+        PointLightData light;
         light.position = sceneLights[i].getPosition();
         light.range = sceneLights[i].getRange();
-        lights[i] = light;
+        light.intensity = sceneLights[i].getIntensity();
+        pointLights[i] = light;
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, lightMesh.instanceVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, pointLightMesh.instanceVBO);
     glBufferData(GL_ARRAY_BUFFER,
-        lights.size() * sizeof(LightData),
-        lights.data(),
+        pointLights.size() * sizeof(PointLightData),
+        pointLights.data(),
+        GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+
+void MyView::UpdateSpotLights()
+{
+    std::vector<SceneModel::SpotLight> sceneLights = scene_->getAllSpotLights();
+    spotLights.resize(sceneLights.size());
+    for (unsigned int i = 0; i < sceneLights.size(); ++i)
+    {
+        SpotLightData light;
+        light.position = sceneLights[i].getPosition();
+        light.coneAngleDegrees = sceneLights[i].getConeAngleDegrees();
+        light.direction = sceneLights[i].getDirection();
+        light.range = sceneLights[i].getRange();
+        light.intensity = sceneLights[i].getIntensity();
+        spotLights[i] = light;
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, spotLightMesh.instanceVBO);
+    glBufferData(GL_ARRAY_BUFFER,
+        spotLights.size() * sizeof(SpotLightData),
+        spotLights.data(),
         GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -910,4 +693,223 @@ void MyView::UpdatePointLights()
 inline glm::vec3 ConvVec3(tsl::Vector3 &vec_)
 {
     return glm::vec3(vec_.x, vec_.y, vec_.z);
+}
+
+void MyView::GenerateShaderPrograms()
+{
+    {
+        Shader vs, fs;
+        vs.loadShader("firstpass_vs.glsl", GL_VERTEX_SHADER);
+        fs.loadShader("firstpass_fs.glsl", GL_FRAGMENT_SHADER);
+
+        firstPassProgram.createProgram();
+        firstPassProgram.addShaderToProgram(&vs);
+        firstPassProgram.addShaderToProgram(&fs);
+
+        // set the channels of the output for this one to be sure
+        glBindFragDataLocation(firstPassProgram.getProgramID(), 0, "position");
+        glBindFragDataLocation(firstPassProgram.getProgramID(), 1, "normal");
+        glBindFragDataLocation(firstPassProgram.getProgramID(), 2, "material");
+
+        firstPassProgram.linkProgram();
+
+        firstPassProgram.useProgram();
+    }
+
+    {
+}   // this empty scope is here because in my editor there is some weird auto format issue that screws with the next 'background shader' scope. ignore it please.
+
+    {
+        Shader vs, fs;
+        vs.loadShader("background_vs.glsl", GL_VERTEX_SHADER);
+        fs.loadShader("background_fs.glsl", GL_FRAGMENT_SHADER);
+
+        backgroundProgram.createProgram();
+        backgroundProgram.addShaderToProgram(&vs);
+        backgroundProgram.addShaderToProgram(&fs);
+
+        backgroundProgram.linkProgram();
+
+        backgroundProgram.useProgram();
+    }
+
+    {
+        Shader vs, fs;
+        vs.loadShader("global_light_vs.glsl", GL_VERTEX_SHADER);
+        fs.loadShader("global_light_fs.glsl", GL_FRAGMENT_SHADER);
+
+        globalLightProgram.createProgram();
+        globalLightProgram.addShaderToProgram(&vs);
+        globalLightProgram.addShaderToProgram(&fs);
+
+        globalLightProgram.linkProgram();
+
+        globalLightProgram.useProgram();
+    }
+
+    {
+        Shader vs, fs;
+        vs.loadShader("light_vs.glsl", GL_VERTEX_SHADER);
+        fs.loadShader("light_fs.glsl", GL_FRAGMENT_SHADER);
+
+        lightProgram.createProgram();
+        lightProgram.addShaderToProgram(&vs);
+        lightProgram.addShaderToProgram(&fs);
+        lightProgram.linkProgram();
+
+        lightProgram.useProgram();
+    }
+
+    {
+        Shader vs, fs;
+        vs.loadShader("postprocess_vs.glsl", GL_VERTEX_SHADER);
+        fs.loadShader("postprocess_fs.glsl", GL_FRAGMENT_SHADER);
+
+        postProcessProgram.createProgram();
+        postProcessProgram.addShaderToProgram(&vs);
+        postProcessProgram.addShaderToProgram(&fs);
+
+        postProcessProgram.linkProgram();
+
+        postProcessProgram.useProgram();
+    }
+}
+
+void MyView::SetupSSBOS()
+{
+    renderSSBO = SSBO([this](GLuint bufferID_) -> bool
+    {
+        glm::mat4 projectionMatrix = glm::perspective(75.f, aspectRatio, 1.f, 1000.f);
+        glm::mat4 viewMatrix = glm::lookAt(scene_->getCamera().getPosition(), scene_->getCamera().getDirection() + scene_->getCamera().getPosition(), glm::vec3(0, 1, 0));
+        glm::mat4 projectionViewMatrix = projectionMatrix * viewMatrix;
+
+        // so since glMapBufferRange does not work, i am going to create a temporary buffer for the per model data, and then copy the full buffer straight into the shaders buffer
+        //unsigned int bufferSize = sizeof(projectMat_)+sizeof(camPos_);
+        //char* buffer = new char[bufferSize];
+        unsigned int bufferSize = 19;
+        float buffer[19];
+
+        //projection matrix first!
+        memcpy(buffer, glm::value_ptr(projectionViewMatrix), sizeof(glm::mat4));
+
+        // camera position next!
+        memcpy(buffer + 16, glm::value_ptr(scene_->getCamera().getPosition()), sizeof(glm::vec3));
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferID_);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, bufferSize * 4, buffer, GL_STREAM_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        return true;
+    });
+    renderSSBO.AttachToProgram(0, firstPassProgram, "BufferRender");
+    renderSSBO.AttachToProgram(0, lightProgram, "BufferRender");
+
+
+
+
+    // setup material SSBO
+    materialSSBO = SSBO([this](GLuint bufferID_) -> bool
+    {
+        std::vector<MaterialData> materialData;
+
+        for (unsigned int i = 0; i < scene_->getAllMaterials().size(); ++i)
+        {
+            mapMaterialIndex[scene_->getAllMaterials()[i].getId()] = materialData.size();
+
+            MaterialData data;
+            data.colour = scene_->getAllMaterials()[i].getDiffuseColour();
+            data.shininess = scene_->getAllMaterials()[i].getShininess();
+            materialData.push_back(data);
+        }
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferID_);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(MaterialData)* materialData.size(), materialData.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        return true;
+    });
+    materialSSBO.AttachToProgram(1, firstPassProgram, "BufferMaterials");
+
+
+
+    directionalLightsSSBO = SSBO([this](GLuint bufferID_) -> bool
+    {
+        std::vector<DirectionalLightData> directionalLights;
+        directionalLights.resize(scene_->getAllDirectionalLights().size());
+
+        for (unsigned int i = 0; i < scene_->getAllDirectionalLights().size(); ++i)
+        {
+            DirectionalLightData data;
+            data.direction = scene_->getAllDirectionalLights()[i].getDirection();
+            data.intensity = scene_->getAllDirectionalLights()[i].getIntensity();
+            directionalLights[i] = data;
+        }
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, bufferID_);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(DirectionalLightData)* directionalLights.size(), directionalLights.data(), GL_STATIC_DRAW);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+        return true;
+    });
+    directionalLightsSSBO.AttachToProgram(2, globalLightProgram, "BufferLights");
+}
+
+void MyView::GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_)
+{
+
+    meshBuffer.GenerateBuffers();
+
+    //load scene meshes
+    for (unsigned int i = 0; i < meshes_.size(); ++i)
+    {
+        MeshBuffer::Mesh mesh = meshBuffer.AddMesh(meshes_[i]);
+        loadedMeshes.push_back(mesh);
+    }
+
+    // set up pointlight mesh
+    {
+        tsl::IndexedMesh mesh;
+        tsl::CreateSphere(1.f, 12, &mesh);
+        tsl::ConvertPolygonsToTriangles(&mesh);
+
+        pointLightMesh = meshBuffer.AddMesh(mesh);
+    }
+
+    // set up spotlight mesh
+    {
+
+        tsl::IndexedMesh mesh;
+        tsl::CreateCone(1.f, 1.f, 12, &mesh);
+        tsl::ConvertPolygonsToTriangles(&mesh);
+
+        spotLightMesh = meshBuffer.AddMesh(mesh);
+    }
+
+    meshBuffer.Flush();
+
+    // set up fullscreen quad. Doesnt use meshBuffer since it is set up in a different way.
+    {
+        std::vector<glm::vec2> vertices(4);
+        vertices[0] = glm::vec2(-1, -1);
+        vertices[1] = glm::vec2(1, -1);
+        vertices[2] = glm::vec2(1, 1);
+        vertices[3] = glm::vec2(-1, 1);
+
+        glGenBuffers(1, &globalLightMesh.instanceVBO);
+        glBindBuffer(GL_ARRAY_BUFFER, globalLightMesh.instanceVBO);
+        glBufferData(GL_ARRAY_BUFFER,
+            vertices.size() * sizeof(glm::vec2),
+            vertices.data(),
+            GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        glGenVertexArrays(1, &globalLightMesh.vao);
+        glBindVertexArray(globalLightMesh.vao);
+        glBindBuffer(GL_ARRAY_BUFFER, globalLightMesh.instanceVBO);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+            sizeof(glm::vec2), 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
 }

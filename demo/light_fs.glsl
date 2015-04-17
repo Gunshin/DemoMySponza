@@ -4,6 +4,7 @@ struct Light
 {
     vec3 position;
     float range;
+    vec3 intensity;
 };
 
 layout(std140, binding = 0) buffer BufferRender
@@ -33,7 +34,7 @@ void main(void)
 
     vec3 col = calculateColour(vs_light.position, vs_light.range, position, normal, V, matColour.a);
 
-	reflected_light = col * matColour.rgb;
+	reflected_light = col * matColour.rgb * vs_light.intensity;
 }
 
 vec3 calculateColour(vec3 lightPos_, float lightRange_, vec3 fragPos_, vec3 fragNorm_, vec3 V_, float shininess_)

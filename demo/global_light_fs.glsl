@@ -11,13 +11,9 @@ layout(std140, binding = 2) buffer BufferLights
     DirectionalLight lights[];
 };
 
-
 uniform sampler2DRect sampler_world_position;
 uniform sampler2DRect sampler_world_normal;
 uniform sampler2DRect sampler_world_mat;
-
-uniform vec3 directional_light;
-uniform vec3 light_intensity;
 
 out vec3 reflected_light;
 
@@ -29,11 +25,11 @@ void main(void)
     vec3 normal = texelFetch(sampler_world_normal, pixelCoord).xyz;
     vec3 mat = texelFetch(sampler_world_mat, pixelCoord).xyz;
 
-    reflected_light = vec3(0,0,0);
+    reflected_light = vec3(0,0,0);//lights[0].intensity;
 
     for(int i = 0; i < lights.length(); ++i)
     {
-        vec3 directionalLightColour = AddDirectionalLight(-directional_light, light_intensity, normal);
+        vec3 directionalLightColour = AddDirectionalLight(-lights[i].direction, lights[i].intensity, normal);
 
         reflected_light += directionalLightColour * mat;
     }

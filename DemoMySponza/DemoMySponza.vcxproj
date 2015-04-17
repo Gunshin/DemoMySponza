@@ -116,11 +116,13 @@
     <ClCompile Include="..\external\src\tygra\FileHelper.cpp" />
     <ClCompile Include="..\external\src\tygra\Window.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MeshBuffer.cpp" />
     <ClCompile Include="MyController.cpp" />
     <ClCompile Include="MyView.cpp" />
     <ClCompile Include="QueryTimer.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="ShaderProgram.cpp" />
+    <ClCompile Include="SSBO.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\external\include\SceneModel\Camera.hpp" />
@@ -135,6 +137,8 @@
     <ClInclude Include="..\external\include\SceneModel\SceneModel_fwd.hpp" />
     <ClInclude Include="..\external\include\SceneModel\SpotLight.hpp" />
     <ClInclude Include="..\external\src\SceneModel\FirstPersonMovement.hpp" />
+    <ClInclude Include="MeshBuffer.hpp" />
+    <ClInclude Include="SSBO.hpp" />
     <ClInclude Include="MyController.hpp" />
     <ClInclude Include="MyView.hpp" />
     <ClInclude Include="QueryTimer.hpp" />

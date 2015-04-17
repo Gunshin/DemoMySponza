@@ -30,7 +30,7 @@ public:
 
     void useProgram();
 
-    GLuint getProgramID();
+    GLuint getProgramID() const;
 
 };
 

@@ -70,7 +70,7 @@ void ShaderProgram::useProgram()
     }
 }
 
-GLuint ShaderProgram::getProgramID()
+GLuint ShaderProgram::getProgramID() const
 {
     return programID;
 }

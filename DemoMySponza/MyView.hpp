@@ -9,6 +9,8 @@
 
 #include "ShaderProgram.hpp"
 #include "QueryTimer.hpp"
+#include "SSBO.hpp"
+#include "MeshBuffer.hpp"
 
 class MyView : public tygra::WindowViewDelegate
 {
@@ -41,40 +43,22 @@ private:
 
     float aspectRatio;
 
-    struct Vertex
-    {
-        Vertex() {};
-        Vertex(glm::vec3 pos_, glm::vec3 norm_) : position(pos_), normal(norm_) {}
-        glm::vec3 position, normal;
-    };
-    GLuint vertexVBO; // VertexBufferObject for the vertex positions
-    GLuint elementVBO; // VertexBufferObject for the elements (indices)
+    MeshBuffer meshBuffer;
 
-    struct Mesh
-    {
-        GLuint vao;// VertexArrayObject for the shape's vertex array settings
-        GLuint instanceVBO;
-        int startVerticeIndex, endVerticeIndex, verticeCount;
-        int startElementIndex, endElementIndex, element_count; // Needed for when we draw using the vertex arrays
 
-        Mesh() : startVerticeIndex(0),
-            endVerticeIndex(0),
-            verticeCount(0),
-            startElementIndex(0),
-            endElementIndex(0),
-            element_count(0)
-        {
-        }
-    };
-    std::vector< Mesh > loadedMeshes;
+    std::vector< MeshBuffer::Mesh > loadedMeshes;
+
+    SSBO materialSSBO, renderSSBO, directionalLightsSSBO;
 
     struct MaterialData
     {
         glm::vec3 colour;
         float shininess;
     };
-    std::vector< MaterialData > materials;
-    GLuint bufferMaterials;
+    /*
+    generate a map which contains the MaterialID as the key, which leads to the index inside of my vector that the material is contained
+    */
+    std::map<SceneModel::MaterialId, unsigned int> mapMaterialIndex;
 
     struct InstanceData
     {
@@ -84,15 +68,34 @@ private:
     std::vector< std::vector< InstanceData > > instanceData;
 
     // cant get access to the MyScene::Light since we are only declaring MyScene as a class (no direct reference)
-    struct LightData
+    struct PointLightData
     {
         glm::vec3 position;
         float range;
+        glm::vec3 intensity;
     };
-    std::vector<LightData> lights;
+    std::vector<PointLightData> pointLights;
     GLuint bufferRender;
-    Mesh lightMesh, globalLightMesh;
+    MeshBuffer::Mesh pointLightMesh, globalLightMesh;
 
+    struct SpotLightData
+    {
+        glm::vec3 position;
+        float coneAngleDegrees;
+        glm::vec3 direction;
+        float range;
+        glm::vec3 intensity;
+    };
+    std::vector<SpotLightData> spotLights;
+    MeshBuffer::Mesh spotLightMesh;
+
+    struct DirectionalLightData
+    {
+        glm::vec3 direction;
+        float pack1;
+        glm::vec3 intensity;
+        float pack2;
+    };
     GLuint bufferDirectionalLights;
 
     ShaderProgram lightProgram, firstPassProgram, globalLightProgram, backgroundProgram, postProcessProgram;
@@ -112,6 +115,11 @@ private:
 
     void SetBuffer(glm::mat4 projectMat_, glm::vec3 camPos_);
     void UpdatePointLights();
+    void UpdateSpotLights();
+
+    void GenerateShaderPrograms();
+    void SetupSSBOS();
+    void GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_);
 
     std::shared_ptr<QueryTimer> gbufferTimer, backgroundTimer, globalLightsTimer, lbufferTimer, postTimer;
     std::vector<GLuint64> gbufferTimes, backgroundTimes, globalLightsTimes, lbufferTimes, postTimes;
