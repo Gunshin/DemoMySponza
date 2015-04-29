@@ -46,8 +46,13 @@ private:
 
     MeshBuffer meshBuffer;
 
+    struct MeshWrapper
+    {
+        MeshBuffer::Mesh mesh;
+        bool isStatic;
+    };
 
-    std::vector< MeshBuffer::Mesh > loadedMeshes;
+    std::vector< MeshWrapper > loadedMeshes;
 
     SSBO materialSSBO, renderSSBO, directionalLightsSSBO;
 
@@ -86,7 +91,7 @@ private:
         float range;
         glm::vec3 intensity;
     };
-    std::vector<SpotLightData> spotLights;
+    VBO vboSpotLight;
     MeshBuffer::Mesh spotLightMesh;
 
     struct DirectionalLightData
@@ -98,7 +103,7 @@ private:
     };
     GLuint bufferDirectionalLights;
 
-    ShaderProgram lightProgram, firstPassProgram, globalLightProgram, backgroundProgram, postProcessProgram;
+    ShaderProgram pointLightProgram, spotLightProgram, firstPassProgram, globalLightProgram, backgroundProgram, postProcessProgram;
 
     GLuint gbufferFBO;
     GLuint gbufferTO[3];

@@ -73,8 +73,8 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
         unsigned int offset = 0;
 
-        glGenVertexArrays(1, &loadedMeshes[i].vao);
-        glBindVertexArray(loadedMeshes[i].vao);
+        glGenVertexArrays(1, &loadedMeshes[i].mesh.vao);
+        glBindVertexArray(loadedMeshes[i].mesh.vao);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
         glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
 
@@ -175,6 +175,90 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
         glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE,
             sizeof(PointLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(4, 1);
+        instanceOffset += sizeof(glm::vec3);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        glBindVertexArray(0);
+
+    }
+
+    {
+        vboSpotLight = VBO([this](GLuint bufferID_) -> bool
+        {
+            std::vector<SceneModel::SpotLight> sceneLights = scene_->getAllSpotLights();
+            std::vector<SpotLightData> data;
+            data.resize(sceneLights.size());
+            for (unsigned int i = 0; i < sceneLights.size(); ++i)
+            {
+                SpotLightData light;
+                light.position = sceneLights[i].getPosition();
+                light.range = sceneLights[i].getRange();
+                light.intensity = sceneLights[i].getIntensity();
+                light.coneAngleDegrees = sceneLights[i].getConeAngleDegrees();
+                light.direction = sceneLights[i].getDirection();
+                data[i] = light;
+            }
+
+            glBindBuffer(GL_ARRAY_BUFFER, bufferID_);
+            glBufferData(GL_ARRAY_BUFFER,
+                data.size() * sizeof(SpotLightData),
+                data.data(),
+                GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+            return true;
+        });
+        vboSpotLight.GenerateBuffer();
+
+        unsigned int offset = 0;
+
+        glGenVertexArrays(1, &spotLightMesh.vao);
+        glBindVertexArray(spotLightMesh.vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
+        glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
+        offset += sizeof(glm::vec3);
+
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
+        offset += sizeof(glm::vec3);
+
+        unsigned int instanceOffset = 0;
+        glBindBuffer(GL_ARRAY_BUFFER, vboPointLight.GetVBOID());
+
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+            sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
+        glVertexAttribDivisor(2, 1);
+        instanceOffset += sizeof(glm::vec3);
+
+        glEnableVertexAttribArray(3);
+        glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE,
+            sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
+        glVertexAttribDivisor(3, 1);
+        instanceOffset += sizeof(float);
+
+        glEnableVertexAttribArray(4);
+        glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE,
+            sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
+        glVertexAttribDivisor(4, 1);
+        instanceOffset += sizeof(glm::vec3);
+
+        glEnableVertexAttribArray(5);
+        glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE,
+            sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
+        glVertexAttribDivisor(5, 1);
+        instanceOffset += sizeof(float);
+
+        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE,
+            sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
+        glVertexAttribDivisor(6, 1);
         instanceOffset += sizeof(glm::vec3);
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -518,13 +602,18 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         // the lights are tagged onto the end of the meshes
         for (unsigned int i = 0; i < loadedMeshes.size(); ++i)
         {
-            glBindVertexArray(loadedMeshes[i].vao);
+            if (!loadedMeshes[i].isStatic)
+            {
+                vboInstances[i].FillData();
+            }
+
+                glBindVertexArray(loadedMeshes[i].mesh.vao);
             glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
-                loadedMeshes[i].element_count,
+                loadedMeshes[i].mesh.element_count,
                 GL_UNSIGNED_INT,
-                TGL_BUFFER_OFFSET(loadedMeshes[i].startElementIndex * sizeof(int)),
+                TGL_BUFFER_OFFSET(loadedMeshes[i].mesh.startElementIndex * sizeof(int)),
                 vboInstances[i].GetSize(),
-                loadedMeshes[i].startVerticeIndex);
+                loadedMeshes[i].mesh.startVerticeIndex);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -596,7 +685,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     int lbufferTimeID = lbufferTimer->Start();
     // lets draw the lights
     {
-        lightProgram.useProgram();
+        pointLightProgram.useProgram();
 
         // additive blending
         glEnable(GL_BLEND);
@@ -616,15 +705,15 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[0]);
-        glUniform1i(glGetUniformLocation(lightProgram.getProgramID(), "sampler_world_position"), 0);
+        glUniform1i(glGetUniformLocation(pointLightProgram.getProgramID(), "sampler_world_position"), 0);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[1]);
-        glUniform1i(glGetUniformLocation(lightProgram.getProgramID(), "sampler_world_normal"), 1);
+        glUniform1i(glGetUniformLocation(pointLightProgram.getProgramID(), "sampler_world_normal"), 1);
 
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[2]);
-        glUniform1i(glGetUniformLocation(lightProgram.getProgramID(), "sampler_world_mat"), 2);
+        glUniform1i(glGetUniformLocation(pointLightProgram.getProgramID(), "sampler_world_mat"), 2);
 
 		vboPointLight.FillData();
 
@@ -645,6 +734,56 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glCullFace(GL_BACK);
     }
     lbufferTimer->End(lbufferTimeID);
+
+    {
+        spotLightProgram.useProgram();
+
+        // additive blending
+        glEnable(GL_BLEND);
+        glBlendEquation(GL_FUNC_ADD);
+        glBlendFunc(GL_ONE, GL_ONE);
+
+        glEnable(GL_DEPTH_TEST);// enable the depth test for use with lights
+        glDepthMask(GL_FALSE);// disable depth writes since we dont want the lights to mess with the depth buffer
+        glDepthFunc(GL_GREATER);// set the depth test to check for in front of the back fragments so that we can light correctly
+
+        glEnable(GL_CULL_FACE); // enable the culling (not on by default)
+        glCullFace(GL_FRONT); // set to cull forward facing fragments
+
+        glEnable(GL_STENCIL_TEST);
+        glStencilFunc(GL_NOTEQUAL, 0, ~0); // background is set to 0, we want the geometry pixels
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[0]);
+        glUniform1i(glGetUniformLocation(spotLightProgram.getProgramID(), "sampler_world_position"), 0);
+
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[1]);
+        glUniform1i(glGetUniformLocation(spotLightProgram.getProgramID(), "sampler_world_normal"), 1);
+
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[2]);
+        glUniform1i(glGetUniformLocation(spotLightProgram.getProgramID(), "sampler_world_mat"), 2);
+
+        vboSpotLight.FillData();
+
+        // instance draw the lights woop woop
+        glBindVertexArray(spotLightMesh.vao);
+        glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
+            spotLightMesh.element_count,
+            GL_UNSIGNED_INT,
+            TGL_BUFFER_OFFSET(spotLightMesh.startElementIndex * sizeof(int)),
+            scene_->getAllSpotLights().size(),
+            spotLightMesh.startVerticeIndex);
+
+        glDisable(GL_STENCIL_TEST);
+        glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LEQUAL);
+
+        glDisable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+    }
 
     int postProcessTimeID = postTimer->Start();
     // post process shenanigans
@@ -760,15 +899,28 @@ void MyView::GenerateShaderPrograms()
 
     {
         Shader vs, fs;
-        vs.loadShader("light_vs.glsl", GL_VERTEX_SHADER);
-        fs.loadShader("light_fs.glsl", GL_FRAGMENT_SHADER);
+        vs.loadShader("pointlight_vs.glsl", GL_VERTEX_SHADER);
+        fs.loadShader("pointlight_fs.glsl", GL_FRAGMENT_SHADER);
 
-        lightProgram.createProgram();
-        lightProgram.addShaderToProgram(&vs);
-        lightProgram.addShaderToProgram(&fs);
-        lightProgram.linkProgram();
+        pointLightProgram.createProgram();
+        pointLightProgram.addShaderToProgram(&vs);
+        pointLightProgram.addShaderToProgram(&fs);
+        pointLightProgram.linkProgram();
 
-        lightProgram.useProgram();
+        pointLightProgram.useProgram();
+    }
+
+    {
+        Shader vs, fs;
+        vs.loadShader("spotlight_vs.glsl", GL_VERTEX_SHADER);
+        fs.loadShader("spotlight_fs.glsl", GL_FRAGMENT_SHADER);
+
+        spotLightProgram.createProgram();
+        spotLightProgram.addShaderToProgram(&vs);
+        spotLightProgram.addShaderToProgram(&fs);
+        spotLightProgram.linkProgram();
+
+        spotLightProgram.useProgram();
     }
 
     {
@@ -814,8 +966,8 @@ void MyView::SetupSSBOS()
     });
     renderSSBO.GenerateBuffer();
     renderSSBO.AttachToProgram(0, firstPassProgram, "BufferRender");
-    renderSSBO.AttachToProgram(0, lightProgram, "BufferRender");
-
+    renderSSBO.AttachToProgram(0, pointLightProgram, "BufferRender");
+    renderSSBO.AttachToProgram(0, spotLightProgram, "BufferRender");
 
 
 
@@ -872,12 +1024,23 @@ void MyView::GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_)
 {
 
     meshBuffer.GenerateBuffers();
-
     //load scene meshes
     for (unsigned int i = 0; i < meshes_.size(); ++i)
     {
-        MeshBuffer::Mesh mesh = meshBuffer.AddMesh(meshes_[i]);
-        loadedMeshes.push_back(mesh);
+        MeshWrapper wrapper;
+        wrapper.mesh = meshBuffer.AddMesh(meshes_[i]);
+
+        std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(meshes_[i].getId());
+        for (unsigned int j = 0; j < ids.size(); ++j)
+        {
+            if (!scene_->getInstanceById(ids[j]).isStatic())
+            {
+                wrapper.isStatic = false;
+                break;
+            }
+        }
+
+        loadedMeshes.push_back(wrapper);
     }
 
     // set up pointlight mesh
