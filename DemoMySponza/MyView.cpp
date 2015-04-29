@@ -183,6 +183,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
     }
 
+	// set up spot light buffer
     {
         vboSpotLight = VBO([this](GLuint bufferID_) -> bool
         {
@@ -195,7 +196,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
                 light.position = sceneLights[i].getPosition();
                 light.range = sceneLights[i].getRange();
                 light.intensity = sceneLights[i].getIntensity();
-                light.coneAngleDegrees = sceneLights[i].getConeAngleDegrees();
+                light.coneAngleDegrees = sceneLights[i].getConeAngleDegrees() / 2;
                 light.direction = sceneLights[i].getDirection();
                 data[i] = light;
             }
@@ -218,44 +219,44 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
         glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
 
-        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(0); // position
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
             sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
         offset += sizeof(glm::vec3);
 
-        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(1); // normal
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
             sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(offset));
         offset += sizeof(glm::vec3);
 
         unsigned int instanceOffset = 0;
-        glBindBuffer(GL_ARRAY_BUFFER, vboPointLight.GetVBOID());
+        glBindBuffer(GL_ARRAY_BUFFER, vboSpotLight.GetVBOID());
 
-        glEnableVertexAttribArray(2);
+        glEnableVertexAttribArray(2); // light position
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
             sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(2, 1);
         instanceOffset += sizeof(glm::vec3);
 
-        glEnableVertexAttribArray(3);
+        glEnableVertexAttribArray(3); // half cone angle
         glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE,
             sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(3, 1);
         instanceOffset += sizeof(float);
 
-        glEnableVertexAttribArray(4);
+        glEnableVertexAttribArray(4); // light direction
         glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE,
             sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(4, 1);
         instanceOffset += sizeof(glm::vec3);
 
-        glEnableVertexAttribArray(5);
+        glEnableVertexAttribArray(5); // range
         glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE,
             sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(5, 1);
         instanceOffset += sizeof(float);
 
-        glEnableVertexAttribArray(6);
+        glEnableVertexAttribArray(6); // intensity
         glVertexAttribPointer(6, 3, GL_FLOAT, GL_FALSE,
             sizeof(SpotLightData), TGL_BUFFER_OFFSET(instanceOffset));
         glVertexAttribDivisor(6, 1);
@@ -771,11 +772,11 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         // instance draw the lights woop woop
         glBindVertexArray(spotLightMesh.vao);
         glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
-            spotLightMesh.element_count,
+			spotLightMesh.element_count,
             GL_UNSIGNED_INT,
-            TGL_BUFFER_OFFSET(spotLightMesh.startElementIndex * sizeof(int)),
+			TGL_BUFFER_OFFSET(spotLightMesh.startElementIndex * sizeof(int)),
             scene_->getAllSpotLights().size(),
-            spotLightMesh.startVerticeIndex);
+			spotLightMesh.startVerticeIndex);
 
         glDisable(GL_STENCIL_TEST);
         glDepthMask(GL_TRUE);
@@ -1050,16 +1051,23 @@ void MyView::GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_)
         tsl::ConvertPolygonsToTriangles(&mesh);
 
         pointLightMesh = meshBuffer.AddMesh(mesh);
+		spotLightMesh.element_count = pointLightMesh.element_count;
+		spotLightMesh.endElementIndex = pointLightMesh.endElementIndex;
+		spotLightMesh.endVerticeIndex = pointLightMesh.endVerticeIndex;
+		spotLightMesh.startElementIndex = pointLightMesh.startElementIndex;
+		spotLightMesh.startVerticeIndex = pointLightMesh.startVerticeIndex;
+		spotLightMesh.verticeCount = pointLightMesh.verticeCount;
+
     }
 
     // set up spotlight mesh
-    {
+    /*{
 
         tsl::IndexedMesh mesh;
         tsl::CreateCone(1.f, 1.f, 12, &mesh);
         tsl::ConvertPolygonsToTriangles(&mesh);
         spotLightMesh = meshBuffer.AddMesh(mesh);
-    }
+    }*/
 
 	// square mesh
 	{

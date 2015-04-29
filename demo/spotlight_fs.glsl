@@ -10,7 +10,7 @@ struct Light
 };
 
 // updated every frame (or render call)
-layout(std140, binding = 1) buffer BufferRender
+layout(std140, binding = 0) buffer BufferRender
 {
     mat4 projectionViewMat;
     vec3 camPosition;
@@ -39,7 +39,7 @@ void main(void)
 	vec3 col = vec3(0,0,0);
     col += calculateColour(vs_light, matColour.rgb, matColour.a, V, position, normal);
 
-    reflected_light = vec3(1, 0, 0);
+	reflected_light = col * vs_light.intensity;
 }
 
 vec3 calculateColour(Light light_, vec3 materialColour_, float shininess_, vec3 V_, vec3 pos_, vec3 normal_)

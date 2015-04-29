@@ -9,7 +9,7 @@ struct Light
     vec3 intensity;
 };
 
-layout(std140, binding = 1) buffer BufferRender
+layout(std140, binding = 0) buffer BufferRender
 {
     mat4 projectionViewMat;
     vec3 camPosition;
