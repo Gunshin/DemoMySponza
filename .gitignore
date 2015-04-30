@@ -3,6 +3,8 @@
 /demo/*
 
 !*.glsl
+!*.vert
+!*.frag
 
 DemoMySponza/Debug
 
