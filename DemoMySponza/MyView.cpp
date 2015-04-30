@@ -521,9 +521,9 @@ int height)
     {
         //TODO: need to change to normal texture2D?
         // So that we can do a post process effect, we draw into a texture again
-        glBindTexture(GL_TEXTURE_RECTANGLE, lbufferTO);
+        glBindTexture(GL_TEXTURE_2D, lbufferTO);
         glTexImage2D(
-            GL_TEXTURE_RECTANGLE,
+			GL_TEXTURE_2D,
             0,
             GL_RGBA32F,
             width,
@@ -533,12 +533,12 @@ int height)
             GL_FLOAT,
             NULL
             );
-        glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
         GLenum lbuffer_status = 0;
         glBindFramebuffer(GL_FRAMEBUFFER, lbufferFBO);
 
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, lbufferTO, 0); // attach position buffer
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lbufferTO, 0); // attach position buffer
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencilRBO); // attach depth stencil buffer
 
         lbuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -834,26 +834,26 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
     //int postProcessTimeID = postTimer->Start();
     //// post process shenanigans
-    //{
-    //    postProcessProgram.useProgram();
-    //    glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
+    {
+  //      fxaaProgram.useProgram();
+  //      glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
 
-    //    glClearColor(0.f, 0.f, 0.25f, 0.f);
-    //    glClear(GL_COLOR_BUFFER_BIT); // clear all 3 buffers
+  //      glClearColor(0.f, 0.f, 0.25f, 0.f);
+  //      glClear(GL_COLOR_BUFFER_BIT); // clear all 3 buffers
 
-    //    glDisable(GL_BLEND); // disable blending
+  //      glDisable(GL_BLEND); // disable blending
 
-    //    glActiveTexture(GL_TEXTURE0);
-    //    glBindTexture(GL_TEXTURE_RECTANGLE, lbufferTO);
-    //    glUniform1i(glGetUniformLocation(postProcessProgram.getProgramID(), "sampler_world_position"), 0);
+  //      glActiveTexture(GL_TEXTURE0);
+  //      glBindTexture(GL_TEXTURE_RECTANGLE, lbufferTO);
+		//glUniform1i(glGetUniformLocation(fxaaProgram.getProgramID(), "sampler_world_position"), 0);
 
-    //    glBindVertexArray(globalLightMesh.vao);
-    //    glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
-    //        globalLightMesh.element_count,
-    //        GL_UNSIGNED_INT,
-    //        TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
-    //        globalLightMesh.startVerticeIndex);
-    //}
+  //      glBindVertexArray(globalLightMesh.vao);
+  //      glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+  //          globalLightMesh.element_count,
+  //          GL_UNSIGNED_INT,
+  //          TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+  //          globalLightMesh.startVerticeIndex);
+    }
     //postTimer->End(postProcessTimeID);
 
     {
@@ -877,7 +877,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glDisable(GL_BLEND); // disable blending
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_RECTANGLE, lbufferTO);
+        glBindTexture(GL_TEXTURE_2D, lbufferTO);
         glUniform1i(glGetUniformLocation(fxaaProgram.getProgramID(), "uSourceTex"), 0);
 
         glUniform2f(glGetUniformLocation(fxaaProgram.getProgramID(), "RCPFrame"), float(1.0 / float(_width)), float(1.0 / float(_height)));
@@ -986,6 +986,8 @@ void MyView::GenerateShaderPrograms()
         Shader vs, fs;
         vs.loadShader("FXAA.vert", GL_VERTEX_SHADER);
         fs.loadShader("FXAA_Default.frag", GL_FRAGMENT_SHADER);
+		/*vs.loadShader("postprocess_vs.glsl", GL_VERTEX_SHADER);
+		fs.loadShader("postprocess_fs.glsl", GL_FRAGMENT_SHADER);*/
 
         fxaaProgram.createProgram();
         fxaaProgram.addShaderToProgram(&vs);
