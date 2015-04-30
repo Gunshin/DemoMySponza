@@ -152,6 +152,8 @@
     <None Include="..\demo\background_vs.glsl" />
     <None Include="..\demo\firstpass_fs.glsl" />
     <None Include="..\demo\firstpass_vs.glsl" />
+    <None Include="..\demo\FXAA.vert" />
+    <None Include="..\demo\FXAA_Default.frag" />
     <None Include="..\demo\global_light_fs.glsl" />
     <None Include="..\demo\global_light_vs.glsl" />
     <None Include="..\demo\pointlight_fs.glsl" />

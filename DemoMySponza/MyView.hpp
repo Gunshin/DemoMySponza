@@ -42,6 +42,7 @@ private:
 
     std::shared_ptr<const SceneModel::Context> scene_;
 
+    int _width, _height; // instead of renaming parameters, im breaking my naming convention >=[
     float aspectRatio;
 
     MeshBuffer meshBuffer;
@@ -103,7 +104,7 @@ private:
     };
     GLuint bufferDirectionalLights;
 
-    ShaderProgram pointLightProgram, spotLightProgram, firstPassProgram, globalLightProgram, backgroundProgram, postProcessProgram;
+    ShaderProgram pointLightProgram, spotLightProgram, firstPassProgram, globalLightProgram, backgroundProgram, fxaaProgram;
 
     GLuint gbufferFBO;
     GLuint gbufferTO[3];

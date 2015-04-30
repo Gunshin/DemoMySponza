@@ -33,6 +33,40 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 {
     assert(scene_ != nullptr);
 
+    std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    std::cout << "File:        es3-kepler/FXAA/assets/shaders/FXAA.vert" << std::endl;
+    std::cout << "SDK Version: v2.0 " << std::endl;
+    std::cout << "Email:       gameworks@nvidia.com" << std::endl;
+    std::cout << "Site:        http://developer.nvidia.com/" << std::endl;
+    std::cout << "" << std::endl;
+    std::cout << "Copyright (c) 2014, NVIDIA CORPORATION. All rights reserved." << std::endl;
+    std::cout << "" << std::endl;
+    std::cout << "Redistribution and use in source and binary forms, with or without" << std::endl;
+    std::cout << "modification, are permitted provided that the following conditions" << std::endl;
+    std::cout << "are met:" << std::endl;
+    std::cout << " * Redistributions of source code must retain the above copyright" << std::endl;
+    std::cout << "   notice, this list of conditions and the following disclaimer." << std::endl;
+    std::cout << " * Redistributions in binary form must reproduce the above copyright" << std::endl;
+    std::cout << "   notice, this list of conditions and the following disclaimer in the" << std::endl;
+    std::cout << "   documentation and/or other materials provided with the distribution." << std::endl;
+    std::cout << " * Neither the name of NVIDIA CORPORATION nor the names of its" << std::endl;
+    std::cout << "   contributors may be used to endorse or promote products derived" << std::endl;
+    std::cout << "   from this software without specific prior written permission." << std::endl;
+    std::cout << "" << std::endl;
+    std::cout << "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY" << std::endl;
+    std::cout << "EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE" << std::endl;
+    std::cout << "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR" << std::endl;
+    std::cout << "PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR" << std::endl;
+    std::cout << "CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL," << std::endl;
+    std::cout << "EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO," << std::endl;
+    std::cout << "PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR" << std::endl;
+    std::cout << "PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY" << std::endl;
+    std::cout << "OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT" << std::endl;
+    std::cout << "(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE" << std::endl;
+    std::cout << "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE." << std::endl;
+    std::cout << "" << std::endl;
+    std::cout << "----------------------------------------------------------------------------------" << std::endl;
+
     GenerateShaderPrograms();
 
     SetupSSBOS();
@@ -45,9 +79,9 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
     for (unsigned int i = 0; i < meshes.size(); ++i)
     {
 
-		std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(meshes[i].getId());
+        std::vector<SceneModel::InstanceId> ids = scene_->getInstancesByMeshId(meshes[i].getId());
 
-		vboInstances[i] = VBO([this, i, ids](GLuint bufferID_) -> bool
+        vboInstances[i] = VBO([this, i, ids](GLuint bufferID_) -> bool
         {
             std::vector<InstanceData> data;
             for (unsigned int j = 0; j < ids.size(); ++j)
@@ -65,7 +99,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
                 GL_STATIC_DRAW);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-			vboInstances[i].SetSize(data.size());
+            vboInstances[i].SetSize(data.size());
 
             return true;
         });
@@ -114,30 +148,30 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
     // set up light vao since it uses a different channel layout
     {
-		vboPointLight = VBO([this](GLuint bufferID_) -> bool
-		{
-			std::vector<SceneModel::PointLight> sceneLights = scene_->getAllPointLights();
-			std::vector<PointLightData> data;
-			data.resize(sceneLights.size());
-			for (unsigned int i = 0; i < sceneLights.size(); ++i)
-			{
-				PointLightData light;
-				light.position = sceneLights[i].getPosition();
-				light.range = sceneLights[i].getRange();
-				light.intensity = sceneLights[i].getIntensity();
-				data[i] = light;
-			}
+        vboPointLight = VBO([this](GLuint bufferID_) -> bool
+        {
+            std::vector<SceneModel::PointLight> sceneLights = scene_->getAllPointLights();
+            std::vector<PointLightData> data;
+            data.resize(sceneLights.size());
+            for (unsigned int i = 0; i < sceneLights.size(); ++i)
+            {
+                PointLightData light;
+                light.position = sceneLights[i].getPosition();
+                light.range = sceneLights[i].getRange();
+                light.intensity = sceneLights[i].getIntensity();
+                data[i] = light;
+            }
 
-			glBindBuffer(GL_ARRAY_BUFFER, bufferID_);
-			glBufferData(GL_ARRAY_BUFFER,
-				data.size() * sizeof(PointLightData),
-				data.data(),
-				GL_STATIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindBuffer(GL_ARRAY_BUFFER, bufferID_);
+            glBufferData(GL_ARRAY_BUFFER,
+                data.size() * sizeof(PointLightData),
+                data.data(),
+                GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-			return true;
-		});
-		vboPointLight.GenerateBuffer();
+            return true;
+        });
+        vboPointLight.GenerateBuffer();
 
         unsigned int offset = 0;
 
@@ -157,7 +191,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
         offset += sizeof(glm::vec3);
 
         unsigned int instanceOffset = 0;
-		glBindBuffer(GL_ARRAY_BUFFER, vboPointLight.GetVBOID());
+        glBindBuffer(GL_ARRAY_BUFFER, vboPointLight.GetVBOID());
 
         glEnableVertexAttribArray(2);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
@@ -183,7 +217,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
     }
 
-	// set up spot light buffer
+    // set up spot light buffer
     {
         vboSpotLight = VBO([this](GLuint bufferID_) -> bool
         {
@@ -268,24 +302,24 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
     }
 
-	// finalise the square
-	{
-		glGenVertexArrays(1, &globalLightMesh.vao);
-		glBindVertexArray(globalLightMesh.vao);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
-		glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
+    // finalise the square
+    {
+        glGenVertexArrays(1, &globalLightMesh.vao);
+        glBindVertexArray(globalLightMesh.vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, meshBuffer.GetElementVBOID());
+        glBindBuffer(GL_ARRAY_BUFFER, meshBuffer.GetVertexVBOID());
 
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
-			sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(0));
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(0));
 
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
-			sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(sizeof(glm::vec3)));
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
+            sizeof(MeshBuffer::Vertex), TGL_BUFFER_OFFSET(sizeof(glm::vec3)));
 
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-	}
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+    }
 
     glGenFramebuffers(1, &gbufferFBO);
     glGenRenderbuffers(1, &depthStencilRBO);
@@ -408,6 +442,8 @@ int width,
 int height)
 {
     glViewport(0, 0, width, height);
+    _width = width;
+    _height = height;
 
     aspectRatio = static_cast<float>(width) / height;
 
@@ -608,7 +644,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
                 vboInstances[i].FillData();
             }
 
-                glBindVertexArray(loadedMeshes[i].mesh.vao);
+            glBindVertexArray(loadedMeshes[i].mesh.vao);
             glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
                 loadedMeshes[i].mesh.element_count,
                 GL_UNSIGNED_INT,
@@ -639,11 +675,11 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
         // draw directional light
         glBindVertexArray(globalLightMesh.vao);
-		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
-			globalLightMesh.element_count,
-			GL_UNSIGNED_INT,
-			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
-			globalLightMesh.startVerticeIndex);
+        glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+            globalLightMesh.element_count,
+            GL_UNSIGNED_INT,
+            TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+            globalLightMesh.startVerticeIndex);
     }
     backgroundTimer->End(backgroundTimeID);
 
@@ -675,11 +711,11 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
         // draw directional light
         glBindVertexArray(globalLightMesh.vao);
-		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
-			globalLightMesh.element_count,
-			GL_UNSIGNED_INT,
-			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
-			globalLightMesh.startVerticeIndex);
+        glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+            globalLightMesh.element_count,
+            GL_UNSIGNED_INT,
+            TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+            globalLightMesh.startVerticeIndex);
     }
     globalLightsTimer->End(globalLightTimeID);
 
@@ -716,7 +752,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glBindTexture(GL_TEXTURE_RECTANGLE, gbufferTO[2]);
         glUniform1i(glGetUniformLocation(pointLightProgram.getProgramID(), "sampler_world_mat"), 2);
 
-		vboPointLight.FillData();
+        vboPointLight.FillData();
 
         // instance draw the lights woop woop
         glBindVertexArray(pointLightMesh.vao);
@@ -735,6 +771,10 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glCullFace(GL_BACK);
     }
     lbufferTimer->End(lbufferTimeID);
+
+    {
+        // shadow perspective depth pass
+    }
 
     {
         spotLightProgram.useProgram();
@@ -772,11 +812,11 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         // instance draw the lights woop woop
         glBindVertexArray(spotLightMesh.vao);
         glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
-			spotLightMesh.element_count,
+            spotLightMesh.element_count,
             GL_UNSIGNED_INT,
-			TGL_BUFFER_OFFSET(spotLightMesh.startElementIndex * sizeof(int)),
+            TGL_BUFFER_OFFSET(spotLightMesh.startElementIndex * sizeof(int)),
             scene_->getAllSpotLights().size(),
-			spotLightMesh.startVerticeIndex);
+            spotLightMesh.startVerticeIndex);
 
         glDisable(GL_STENCIL_TEST);
         glDepthMask(GL_TRUE);
@@ -786,10 +826,49 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glCullFace(GL_BACK);
     }
 
-    int postProcessTimeID = postTimer->Start();
-    // post process shenanigans
     {
-        postProcessProgram.useProgram();
+        // shadows
+        // aspect ration = 1.0f
+        // only some spotlights
+    }
+
+    //int postProcessTimeID = postTimer->Start();
+    //// post process shenanigans
+    //{
+    //    postProcessProgram.useProgram();
+    //    glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
+
+    //    glClearColor(0.f, 0.f, 0.25f, 0.f);
+    //    glClear(GL_COLOR_BUFFER_BIT); // clear all 3 buffers
+
+    //    glDisable(GL_BLEND); // disable blending
+
+    //    glActiveTexture(GL_TEXTURE0);
+    //    glBindTexture(GL_TEXTURE_RECTANGLE, lbufferTO);
+    //    glUniform1i(glGetUniformLocation(postProcessProgram.getProgramID(), "sampler_world_position"), 0);
+
+    //    glBindVertexArray(globalLightMesh.vao);
+    //    glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+    //        globalLightMesh.element_count,
+    //        GL_UNSIGNED_INT,
+    //        TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+    //        globalLightMesh.startVerticeIndex);
+    //}
+    //postTimer->End(postProcessTimeID);
+
+    {
+        // fxaa
+        // fullscreen quad
+        // texture in : texture2d <- call generate mipmaps once __________ mipmaps not being called yet
+        // RCP_Frame vector 2 : (1/width, 1/height) ______
+        // vertex shader:
+        // create tex coord : (vertexPosition + vec2(1, 1)) / 0.5f
+
+        //frag shader:
+        // gl_fragColour -> output fragment_colour
+
+        fxaaProgram.useProgram();
+
         glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
 
         glClearColor(0.f, 0.f, 0.25f, 0.f);
@@ -799,16 +878,18 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_RECTANGLE, lbufferTO);
-        glUniform1i(glGetUniformLocation(postProcessProgram.getProgramID(), "sampler_world_position"), 0);
+        glUniform1i(glGetUniformLocation(fxaaProgram.getProgramID(), "uSourceTex"), 0);
+
+        glUniform2f(glGetUniformLocation(fxaaProgram.getProgramID(), "RCPFrame"), float(1.0 / float(_width)), float(1.0 / float(_height)));
 
         glBindVertexArray(globalLightMesh.vao);
-		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
-			globalLightMesh.element_count,
-			GL_UNSIGNED_INT,
-			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
-			globalLightMesh.startVerticeIndex);
+        glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+            globalLightMesh.element_count,
+            GL_UNSIGNED_INT,
+            TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+            globalLightMesh.startVerticeIndex);
+
     }
-    postTimer->End(postProcessTimeID);
 
     glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcessFBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -816,29 +897,6 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind the framebuffers
 }
-
-//void MyView::UpdateSpotLights()
-//{
-//    std::vector<SceneModel::SpotLight> sceneLights = scene_->getAllSpotLights();
-//    spotLights.resize(sceneLights.size());
-//    for (unsigned int i = 0; i < sceneLights.size(); ++i)
-//    {
-//        SpotLightData light;
-//        light.position = sceneLights[i].getPosition();
-//        light.coneAngleDegrees = sceneLights[i].getConeAngleDegrees();
-//        light.direction = sceneLights[i].getDirection();
-//        light.range = sceneLights[i].getRange();
-//        light.intensity = sceneLights[i].getIntensity();
-//        spotLights[i] = light;
-//    }
-//
-//    glBindBuffer(GL_ARRAY_BUFFER, spotLightMesh.instanceVBO);
-//    glBufferData(GL_ARRAY_BUFFER,
-//        spotLights.size() * sizeof(SpotLightData),
-//        spotLights.data(),
-//        GL_STATIC_DRAW);
-//    glBindBuffer(GL_ARRAY_BUFFER, 0);
-//}
 
 // method fixes damn inconsistencies of this so called 'legacy code'
 inline glm::vec3 ConvVec3(tsl::Vector3 &vec_)
@@ -926,16 +984,16 @@ void MyView::GenerateShaderPrograms()
 
     {
         Shader vs, fs;
-        vs.loadShader("postprocess_vs.glsl", GL_VERTEX_SHADER);
-        fs.loadShader("postprocess_fs.glsl", GL_FRAGMENT_SHADER);
+        vs.loadShader("FXAA.vert", GL_VERTEX_SHADER);
+        fs.loadShader("FXAA_Default.frag", GL_FRAGMENT_SHADER);
 
-        postProcessProgram.createProgram();
-        postProcessProgram.addShaderToProgram(&vs);
-        postProcessProgram.addShaderToProgram(&fs);
+        fxaaProgram.createProgram();
+        fxaaProgram.addShaderToProgram(&vs);
+        fxaaProgram.addShaderToProgram(&fs);
 
-        postProcessProgram.linkProgram();
+        fxaaProgram.linkProgram();
 
-        postProcessProgram.useProgram();
+        fxaaProgram.useProgram();
     }
 }
 
@@ -1051,12 +1109,12 @@ void MyView::GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_)
         tsl::ConvertPolygonsToTriangles(&mesh);
 
         pointLightMesh = meshBuffer.AddMesh(mesh);
-		spotLightMesh.element_count = pointLightMesh.element_count;
-		spotLightMesh.endElementIndex = pointLightMesh.endElementIndex;
-		spotLightMesh.endVerticeIndex = pointLightMesh.endVerticeIndex;
-		spotLightMesh.startElementIndex = pointLightMesh.startElementIndex;
-		spotLightMesh.startVerticeIndex = pointLightMesh.startVerticeIndex;
-		spotLightMesh.verticeCount = pointLightMesh.verticeCount;
+        spotLightMesh.element_count = pointLightMesh.element_count;
+        spotLightMesh.endElementIndex = pointLightMesh.endElementIndex;
+        spotLightMesh.endVerticeIndex = pointLightMesh.endVerticeIndex;
+        spotLightMesh.startElementIndex = pointLightMesh.startElementIndex;
+        spotLightMesh.startVerticeIndex = pointLightMesh.startVerticeIndex;
+        spotLightMesh.verticeCount = pointLightMesh.verticeCount;
 
     }
 
@@ -1067,30 +1125,30 @@ void MyView::GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_)
         tsl::CreateCone(1.f, 1.f, 12, &mesh);
         tsl::ConvertPolygonsToTriangles(&mesh);
         spotLightMesh = meshBuffer.AddMesh(mesh);
-    }*/
+        }*/
 
-	// square mesh
-	{
-		std::vector<glm::vec3> vertices = {
-			glm::vec3(-1, -1, 0),
-			glm::vec3(1, -1, 0),
-			glm::vec3(1, 1, 0),
-			glm::vec3(-1, 1, 0)
-		};
+    // square mesh
+    {
+        std::vector<glm::vec3> vertices = {
+            glm::vec3(-1, -1, 0),
+            glm::vec3(1, -1, 0),
+            glm::vec3(1, 1, 0),
+            glm::vec3(-1, 1, 0)
+        };
 
-		std::vector<glm::vec3> normals = {
-			glm::vec3(0, 0, -1),
-			glm::vec3(0, 0, -1),
-			glm::vec3(0, 0, -1),
-			glm::vec3(0, 0, -1)
-		};
+        std::vector<glm::vec3> normals = {
+            glm::vec3(0, 0, -1),
+            glm::vec3(0, 0, -1),
+            glm::vec3(0, 0, -1),
+            glm::vec3(0, 0, -1)
+        };
 
-		std::vector<unsigned int> elements = {
-			0, 1, 2, 3
-		};
+        std::vector<unsigned int> elements = {
+            0, 1, 2, 3
+        };
 
-		globalLightMesh = meshBuffer.AddMesh(vertices, normals, elements);
+        globalLightMesh = meshBuffer.AddMesh(vertices, normals, elements);
     }
 
-	meshBuffer.Flush();
+    meshBuffer.Flush();
 }

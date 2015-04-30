@@ -187,5 +187,11 @@
     <None Include="..\demo\pointlight_vs.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\demo\FXAA.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\demo\FXAA_Default.frag">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
