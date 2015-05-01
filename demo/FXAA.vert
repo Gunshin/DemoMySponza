@@ -35,14 +35,11 @@
 #version 430
 
 in vec2 aPosition;
-in vec2 aTexCoord;
 
 out vec2 vTexCoord;
 
 void main(void)
 {
-    vTexCoord = aTexCoord;   
-    //vTexCoord = (aPosition + vec2(1, 1)) / 0.5f;
-      gl_Position = vec4(aPosition.x, aPosition.y, 0.0, 1.0);
-      //gl_Position = vec4((aPosition + vec2(1, 1)) / 0.5f, 0, 1.0);
+    vTexCoord = (aPosition + vec2(1, 1)) * 0.5f;
+    gl_Position = vec4(aPosition.x, aPosition.y, 0.0, 1.0);
 }

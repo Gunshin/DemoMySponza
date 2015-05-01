@@ -524,7 +524,7 @@ int height)
         glBindTexture(GL_TEXTURE_2D, lbufferTO);
         glTexImage2D(
 			GL_TEXTURE_2D,
-            0,
+            1,
             GL_RGBA32F,
             width,
             height,
