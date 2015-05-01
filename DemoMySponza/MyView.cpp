@@ -524,7 +524,7 @@ int height)
         glBindTexture(GL_TEXTURE_2D, lbufferTO);
         glTexImage2D(
 			GL_TEXTURE_2D,
-            1,
+            0,
             GL_RGBA32F,
             width,
             height,
@@ -533,6 +533,9 @@ int height)
             GL_FLOAT,
             NULL
             );
+
+		glGenerateMipmap(GL_TEXTURE_2D);
+
 		glBindTexture(GL_TEXTURE_2D, 0);
 
         GLenum lbuffer_status = 0;
