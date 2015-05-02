@@ -534,7 +534,7 @@ int height)
             NULL
             );
 
-		glGenerateMipmap(GL_TEXTURE_2D);
+		glGenerateMipmap(GL_TEXTURE_2D); // generate mipmaps so that the fxaa shader will work
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -690,7 +690,6 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     // global lights
     {
         globalLightProgram.useProgram();
-        //glBindFramebuffer(GL_FRAMEBUFFER, lbufferFBO);
 
         glDisable(GL_DEPTH_TEST); // disable depth test snce we are drawing a full screen quad
         glDisable(GL_BLEND);
@@ -836,27 +835,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     }
 
     //int postProcessTimeID = postTimer->Start();
-    //// post process shenanigans
-    {
-  //      fxaaProgram.useProgram();
-  //      glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
 
-  //      glClearColor(0.f, 0.f, 0.25f, 0.f);
-  //      glClear(GL_COLOR_BUFFER_BIT); // clear all 3 buffers
-
-  //      glDisable(GL_BLEND); // disable blending
-
-  //      glActiveTexture(GL_TEXTURE0);
-  //      glBindTexture(GL_TEXTURE_RECTANGLE, lbufferTO);
-		//glUniform1i(glGetUniformLocation(fxaaProgram.getProgramID(), "sampler_world_position"), 0);
-
-  //      glBindVertexArray(globalLightMesh.vao);
-  //      glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
-  //          globalLightMesh.element_count,
-  //          GL_UNSIGNED_INT,
-  //          TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
-  //          globalLightMesh.startVerticeIndex);
-    }
     //postTimer->End(postProcessTimeID);
 
     {
