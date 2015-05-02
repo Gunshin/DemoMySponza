@@ -46,7 +46,7 @@ vec3 calculateColour(vec3 lightPos_, float lightRange_, vec3 fragPos_, vec3 frag
 
 	float distance = distance(fragPos_, lightPos_);
 
-    vec3 attenuatedDistance = vec3(1.0, 1.0, 1.0) * smoothstep(lightRange_, 1, distance);
+    vec3 attenuatedDistance = vec3(1.0, 1.0, 1.0) * smoothstep(0, lightRange_, lightRange_ - distance);
 
     vec3 attenuatedLight = attenuatedDistance;
 

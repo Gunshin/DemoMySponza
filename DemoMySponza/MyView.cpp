@@ -331,8 +331,11 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 	glGenFramebuffers(1, &depthPrePassFBO);
 	glGenTextures(1, &depthPrePassTO);
 
-    glGenFramebuffers(1, &postProcessFBO);
-    glGenRenderbuffers(1, &postProcessColourRBO);
+	glGenFramebuffers(1, &depthPassFBO);
+	glGenTextures(1, &depthPassTO);
+
+    glGenFramebuffers(1, &fxaaFBO);
+	glGenRenderbuffers(1, &fxaaColourRBO);
 
     int rollingAverage = 20;
     std::vector<float> temp;
@@ -547,7 +550,7 @@ int height)
             NULL
             );
 
-		glGenerateMipmap(GL_TEXTURE_2D); // generate mipmaps so that the fxaa shader will work
+		glGenerateMipmap(GL_TEXTURE_2D);
 
 		glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -600,16 +603,51 @@ int height)
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
+	{
+		// single pixel texture object to allow us to do our depth of field shenanigans
+		glBindTexture(GL_TEXTURE_2D, depthPassTO);
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA32F,
+			width,
+			height,
+			0,
+			GL_RGBA,
+			GL_FLOAT,
+			NULL
+			);
+
+		glGenerateMipmap(GL_TEXTURE_2D); // generate mipmaps so that the fxaa shader will work
+
+		glBindTexture(GL_TEXTURE_2D, 0);
+
+		GLenum lbuffer_status = 0;
+		glBindFramebuffer(GL_FRAMEBUFFER, depthPassFBO);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, depthPassTO, 0); // attach depth output
+
+		lbuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (lbuffer_status != GL_FRAMEBUFFER_COMPLETE)
+		{
+			tglDebugMessage(GL_DEBUG_SEVERITY_HIGH, "depthPass buffer not complete");
+		}
+
+		GLenum buffers[] = { GL_COLOR_ATTACHMENT0 };
+		glDrawBuffers(1, buffers);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
     {
         // pbuffer colour buffer
-        glBindRenderbuffer(GL_RENDERBUFFER, postProcessColourRBO);
+		glBindRenderbuffer(GL_RENDERBUFFER, fxaaColourRBO);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB32F, width, height);
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
         GLenum pbuffer_status = 0;
-        glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, fxaaFBO);
 
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, postProcessColourRBO); // attach colour buffer
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fxaaColourRBO); // attach colour buffer
 
         pbuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (pbuffer_status != GL_FRAMEBUFFER_COMPLETE)
@@ -637,8 +675,8 @@ windowViewDidStop(std::shared_ptr<tygra::Window> window)
 	glDeleteFramebuffers(1, &depthPrePassFBO);
 	glDeleteTextures(1, &depthPrePassTO);
 
-    glDeleteFramebuffers(1, &postProcessFBO);
-    glDeleteRenderbuffers(1, &postProcessColourRBO);
+	glDeleteFramebuffers(1, &fxaaFBO);
+	glDeleteRenderbuffers(1, &fxaaColourRBO);
 
     glDeleteQueries(1, &queryID);
 
@@ -897,6 +935,37 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
 	}
 
+	// depth of field pass
+	{
+
+		depthProgram.useProgram();
+
+		glBindFramebuffer(GL_FRAMEBUFFER, depthPassFBO);
+
+		glDisable(GL_BLEND); // disable blending
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_RECTANGLE, depthStencilTO);
+		glUniform1i(glGetUniformLocation(depthProgram.getProgramID(), "sampler_depth"), 0);
+
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_RECTANGLE, depthPrePassTO);
+		glUniform1i(glGetUniformLocation(depthProgram.getProgramID(), "sampler_focus_depth"), 1);
+
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, lbufferTO);
+		glUniform1i(glGetUniformLocation(depthProgram.getProgramID(), "sampler_texture"), 2);
+
+		// shadow perspective depth pass
+		glBindVertexArray(globalLightMesh.vao);
+		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+			globalLightMesh.element_count,
+			GL_UNSIGNED_INT,
+			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+			globalLightMesh.startVerticeIndex);
+
+	}
+
     {
         // shadows
         // aspect ration = 1.0f
@@ -920,7 +989,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
         fxaaProgram.useProgram();
 
-        glBindFramebuffer(GL_FRAMEBUFFER, postProcessFBO);
+		glBindFramebuffer(GL_FRAMEBUFFER, fxaaFBO);
 
         glClearColor(0.f, 0.f, 0.25f, 0.f);
         glClear(GL_COLOR_BUFFER_BIT); // clear all 3 buffers
@@ -942,7 +1011,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
     }
 
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, postProcessFBO);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, fxaaFBO);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     glBlitFramebuffer(0, 0, viewport_size[2], viewport_size[3], 0, 0, viewport_size[2], viewport_size[3], GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
@@ -1059,6 +1128,20 @@ void MyView::GenerateShaderPrograms()
 		depthPrePassProgram.linkProgram();
 
 		depthPrePassProgram.useProgram();
+	}
+
+	{
+		Shader vs, fs;
+		vs.loadShader("depth_pass_vs.glsl", GL_VERTEX_SHADER);
+		fs.loadShader("depth_pass_fs.glsl", GL_FRAGMENT_SHADER);
+
+		depthProgram.createProgram();
+		depthProgram.addShaderToProgram(&vs);
+		depthProgram.addShaderToProgram(&fs);
+
+		depthProgram.linkProgram();
+
+		depthProgram.useProgram();
 	}
 
 }

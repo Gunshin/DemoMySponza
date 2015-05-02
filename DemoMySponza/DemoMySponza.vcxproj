@@ -150,6 +150,8 @@
   <ItemGroup>
     <None Include="..\demo\background_fs.glsl" />
     <None Include="..\demo\background_vs.glsl" />
+    <None Include="..\demo\depth_pass_fs.glsl" />
+    <None Include="..\demo\depth_pass_vs.glsl" />
     <None Include="..\demo\depth_pre_pass_fs.glsl" />
     <None Include="..\demo\depth_pre_pass_vs.glsl" />
     <None Include="..\demo\firstpass_fs.glsl" />

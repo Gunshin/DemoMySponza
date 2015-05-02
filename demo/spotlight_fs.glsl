@@ -55,7 +55,7 @@ vec3 calculateColour(Light light_, vec3 materialColour_, float shininess_, vec3 
 
 		float distance = distance(pos_, light_.position);
 
-        vec3 attenuatedDistance = vec3(1.0, 1.0, 1.0) * smoothstep(light_.range, 1, distance);
+		vec3 attenuatedDistance = vec3(1.0, 1.0, 1.0) * smoothstep(0, light_.range, light_.range - distance);
         vec3 attenuatedCone = vec3(1.0, 1.0, 1.0) * smoothstep(cos(light_.half_cone_angle_degrees), 1, LDdotML);
 
         vec3 attenuatedLight = attenuatedDistance * attenuatedCone;
