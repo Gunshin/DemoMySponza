@@ -14,14 +14,12 @@ void main(void)
 
 	ivec2 centre = ivec2(dimensions / 2);
 
-	int width = 1;
-
 	float depthTotal = 0;
 
-	for (int i = -width + 1; i < width; ++i)
+	for (int i = -1; i < 2; ++i)
 	{
 
-		for (int j = -width + 1; j < width; ++j)
+		for (int j = -1; j < 2; ++j)
 		{
 
 			depthTotal += texelFetch(sampler_depth, ivec2(i, j) + centre).r;
@@ -30,7 +28,7 @@ void main(void)
 
 	}
 
-	out_colour = vec4(depthTotal / (width * width), 0, 0, 0);
+	out_colour = vec4(depthTotal / 9, 0, 0, 0);
 
 
     /*float pixelLuminance = GetLuminanceValue(pixelCoord.x, pixelCoord.y);
