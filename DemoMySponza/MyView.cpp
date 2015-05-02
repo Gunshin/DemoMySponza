@@ -322,11 +322,14 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
     }
 
     glGenFramebuffers(1, &gbufferFBO);
-    glGenRenderbuffers(1, &depthStencilRBO);
+	glGenTextures(1, &depthStencilTO);
     glGenTextures(3, gbufferTO);
 
     glGenFramebuffers(1, &lbufferFBO);
     glGenTextures(1, &lbufferTO);
+
+	glGenFramebuffers(1, &depthPrePassFBO);
+	glGenTextures(1, &depthPrePassTO);
 
     glGenFramebuffers(1, &postProcessFBO);
     glGenRenderbuffers(1, &postProcessColourRBO);
@@ -493,15 +496,25 @@ int height)
             );
         glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
-        // gbuffer depth stencil buffer
-        glBindRenderbuffer(GL_RENDERBUFFER, depthStencilRBO);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
-        glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		// depth texture
+		glBindTexture(GL_TEXTURE_RECTANGLE, depthStencilTO);
+		glTexImage2D(
+			GL_TEXTURE_RECTANGLE,
+			0,
+			GL_DEPTH24_STENCIL8,
+			width,
+			height,
+			0,
+			GL_DEPTH_STENCIL,
+			GL_UNSIGNED_INT_24_8,
+			NULL
+			);
+		glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
         GLenum gbuffer_status = 0;
         glBindFramebuffer(GL_FRAMEBUFFER, gbufferFBO);
 
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencilRBO); // attach depth stencil buffer
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_RECTANGLE, depthStencilTO, 0); // attach depth stencil buffer
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, gbufferTO[0], 0); // attach position buffer
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_RECTANGLE, gbufferTO[1], 0); // attach normal buffer
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_RECTANGLE, gbufferTO[2], 0); // attach material buffer
@@ -542,7 +555,7 @@ int height)
         glBindFramebuffer(GL_FRAMEBUFFER, lbufferFBO);
 
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, lbufferTO, 0); // attach position buffer
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depthStencilRBO); // attach depth stencil buffer
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_RECTANGLE, depthStencilTO, 0); // attach depth stencil buffer
 
         lbuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (lbuffer_status != GL_FRAMEBUFFER_COMPLETE)
@@ -554,6 +567,38 @@ int height)
         glDrawBuffers(1, buffers);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
+
+	{
+		// single pixel texture object to allow us to do our depth of field shenanigans
+		glBindTexture(GL_TEXTURE_RECTANGLE, depthPrePassTO);
+		glTexImage2D(
+			GL_TEXTURE_RECTANGLE,
+			0,
+			GL_RGBA32F,
+			1,
+			1,
+			0,
+			GL_RGBA,
+			GL_FLOAT,
+			NULL
+			);
+		glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+
+		GLenum lbuffer_status = 0;
+		glBindFramebuffer(GL_FRAMEBUFFER, depthPrePassFBO);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, depthPrePassTO, 0); // attach depth output
+
+		lbuffer_status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (lbuffer_status != GL_FRAMEBUFFER_COMPLETE)
+		{
+			tglDebugMessage(GL_DEBUG_SEVERITY_HIGH, "depthPrePass buffer not complete");
+		}
+
+		GLenum buffers[] = { GL_COLOR_ATTACHMENT0 };
+		glDrawBuffers(1, buffers);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
     {
         // pbuffer colour buffer
@@ -583,11 +628,14 @@ windowViewDidStop(std::shared_ptr<tygra::Window> window)
 {
 
     glDeleteFramebuffers(1, &gbufferFBO);
-    glDeleteRenderbuffers(1, &depthStencilRBO);
+	glDeleteTextures(1, &depthStencilTO);
     glDeleteTextures(3, gbufferTO);
 
     glDeleteFramebuffers(1, &lbufferFBO);
     glDeleteTextures(1, &lbufferTO);
+
+	glDeleteFramebuffers(1, &depthPrePassFBO);
+	glDeleteTextures(1, &depthPrePassTO);
 
     glDeleteFramebuffers(1, &postProcessFBO);
     glDeleteRenderbuffers(1, &postProcessColourRBO);
@@ -774,9 +822,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
     }
     lbufferTimer->End(lbufferTimeID);
 
-    {
-        // shadow perspective depth pass
-    }
+    
 
     {
         spotLightProgram.useProgram();
@@ -827,6 +873,29 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glDisable(GL_CULL_FACE);
         glCullFace(GL_BACK);
     }
+
+	{
+		depthPrePassProgram.useProgram();
+
+		glBindFramebuffer(GL_FRAMEBUFFER, depthPrePassFBO);
+
+		glDisable(GL_BLEND); // disable blending
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_RECTANGLE, depthStencilTO);
+		glUniform1i(glGetUniformLocation(depthPrePassProgram.getProgramID(), "sampler_depth"), 0);
+
+		glUniform2f(glGetUniformLocation(depthPrePassProgram.getProgramID(), "dimensions"), float(_width), float(_height));
+
+		// shadow perspective depth pass
+		glBindVertexArray(globalLightMesh.vao);
+		glDrawElementsBaseVertex(GL_TRIANGLE_FAN,
+			globalLightMesh.element_count,
+			GL_UNSIGNED_INT,
+			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
+			globalLightMesh.startVerticeIndex);
+
+	}
 
     {
         // shadows
@@ -968,8 +1037,6 @@ void MyView::GenerateShaderPrograms()
         Shader vs, fs;
         vs.loadShader("FXAA.vert", GL_VERTEX_SHADER);
         fs.loadShader("FXAA_Default.frag", GL_FRAGMENT_SHADER);
-		/*vs.loadShader("postprocess_vs.glsl", GL_VERTEX_SHADER);
-		fs.loadShader("postprocess_fs.glsl", GL_FRAGMENT_SHADER);*/
 
         fxaaProgram.createProgram();
         fxaaProgram.addShaderToProgram(&vs);
@@ -979,6 +1046,21 @@ void MyView::GenerateShaderPrograms()
 
         fxaaProgram.useProgram();
     }
+
+	{
+		Shader vs, fs;
+		vs.loadShader("depth_pre_pass_vs.glsl", GL_VERTEX_SHADER);
+		fs.loadShader("depth_pre_pass_fs.glsl", GL_FRAGMENT_SHADER);
+
+		depthPrePassProgram.createProgram();
+		depthPrePassProgram.addShaderToProgram(&vs);
+		depthPrePassProgram.addShaderToProgram(&fs);
+
+		depthPrePassProgram.linkProgram();
+
+		depthPrePassProgram.useProgram();
+	}
+
 }
 
 void MyView::SetupSSBOS()

@@ -1,16 +1,39 @@
 #version 430
 
-uniform sampler2DRect sampler_colour;
+uniform sampler2DRect sampler_depth;
+
+uniform vec2 dimensions;
 
 out vec4 out_colour;
 
-float GetLuminanceValue(int x_, int y_);
-
 void main(void)
 {
-	ivec2 pixelCoord = ivec2(gl_FragCoord.xy);
 
-    float pixelLuminance = GetLuminanceValue(pixelCoord.x, pixelCoord.y);
+
+	//ivec2 pixelCoord = ivec2(gl_FragCoord.xy);
+
+	ivec2 centre = ivec2(dimensions / 2);
+
+	int width = 1;
+
+	float depthTotal = 0;
+
+	for (int i = -width + 1; i < width; ++i)
+	{
+
+		for (int j = -width + 1; j < width; ++j)
+		{
+
+			depthTotal += texelFetch(sampler_depth, ivec2(i, j) + centre).r;
+
+		}
+
+	}
+
+	out_colour = vec4(depthTotal / (width * width), 0, 0, 0);
+
+
+    /*float pixelLuminance = GetLuminanceValue(pixelCoord.x, pixelCoord.y);
     float luminance[8];
     luminance[0] = GetLuminanceValue(pixelCoord.x - 1, pixelCoord.y);
     luminance[1] = GetLuminanceValue(pixelCoord.x + 1, pixelCoord.y);
@@ -52,15 +75,7 @@ void main(void)
     else
     {
 	    out_colour = texelFetch(sampler_colour, pixelCoord);
-    }
+    }*/
 
     //out_colour = lDiff > 0.01 ? vec4(1, 1, 1, 1) : vec4(0, 0, 0, 1);
-}
-
-float GetLuminanceValue(int x_, int y_)
-{
-
-    vec4 pixelCol = texelFetch(sampler_colour, ivec2(x_, y_));
-    return (0.2126 * pixelCol.r) + (0.7152 * pixelCol.g) + (0.0722 * pixelCol.b);
-
 }

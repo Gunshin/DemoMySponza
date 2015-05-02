@@ -150,6 +150,8 @@
   <ItemGroup>
     <None Include="..\demo\background_fs.glsl" />
     <None Include="..\demo\background_vs.glsl" />
+    <None Include="..\demo\depth_pre_pass_fs.glsl" />
+    <None Include="..\demo\depth_pre_pass_vs.glsl" />
     <None Include="..\demo\firstpass_fs.glsl" />
     <None Include="..\demo\firstpass_vs.glsl" />
     <None Include="..\demo\FXAA.vert" />
@@ -158,8 +160,6 @@
     <None Include="..\demo\global_light_vs.glsl" />
     <None Include="..\demo\pointlight_fs.glsl" />
     <None Include="..\demo\pointlight_vs.glsl" />
-    <None Include="..\demo\postprocess_fs.glsl" />
-    <None Include="..\demo\postprocess_vs.glsl" />
     <None Include="..\demo\spotlight_fs.glsl" />
     <None Include="..\demo\spotlight_vs.glsl" />
   </ItemGroup>
