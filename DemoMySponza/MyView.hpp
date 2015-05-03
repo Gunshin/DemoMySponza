@@ -117,8 +117,11 @@ private:
 	GLuint depthPrePassFBO;
 	GLuint depthPrePassTO;
 
-	GLuint depthPassFBO;
-	GLuint depthPassTO;
+	GLuint depthHorizontalPassFBO;
+	GLuint depthHorizontalPassTO;
+
+	GLuint depthVerticalPassFBO;
+	GLuint depthVerticalPassTO;
 
     GLuint fxaaFBO;
     GLuint fxaaColourRBO;

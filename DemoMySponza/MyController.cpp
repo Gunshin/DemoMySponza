@@ -104,6 +104,7 @@ windowControlKeyboardChanged(std::shared_ptr<tygra::Window> window,
     case 'S':
         camera_move_speed_[3] = down ? 1.f : 0.f;
         break;
+	
     }
 
     updateCameraTranslation();
@@ -116,6 +117,9 @@ windowControlKeyboardChanged(std::shared_ptr<tygra::Window> window,
     case tygra::kWindowKeyF2:
         scene_->toggleCameraAnimation();
         break;
+	case 'T':
+		drawDoF = !drawDoF;
+		break;
     }
 }
 
@@ -201,4 +205,10 @@ updateCameraTranslation()
         - key_speed * camera_move_speed_[3];
     scene_->getCamera().setLinearVelocity(
         glm::vec3(sideward_speed, 0, forward_speed));
+}
+
+
+bool MyController::getDrawDoF() const
+{
+	return drawDoF;
 }
