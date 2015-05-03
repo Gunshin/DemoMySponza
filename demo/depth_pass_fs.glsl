@@ -5,23 +5,38 @@ uniform sampler2DRect sampler_depth;
 
 uniform sampler2D sampler_texture;
 
+uniform vec2 near_far;
+
 out vec4 out_colour;
+
+
+float lensDiameter = 20;
+
+
 
 void main(void)
 {
 
-	ivec2 pixelCoord = ivec2(gl_FragCoord.xy);
+	vec2 pixelCoord = vec2(gl_FragCoord.xy/textureSize(sampler_texture, 0));
+	ivec2 depthCoord = ivec2(gl_FragCoord.xy);
 
-	float focusDepth = texelFetch(sampler_focus_depth, ivec2(0, 0)); // only one pixel in this sampler
+	float p33 = (near_far.y + near_far.x) / (near_far.x - near_far.y);
+	float p34 = ((-2 * near_far.y) * near_far.x) / (near_far.y - near_far.x);
 
-	
 
-	float pixelDepth = texelFetch(sampler_depth, pixelCoord);
 
-	//out_colour = vec4(pixelDepth - focusDepth, 0, 0, 1);
+	float focusDepth = (-p34 / (p33 + texelFetch(sampler_focus_depth, ivec2(0, 0)))); // only one pixel in this sampler
 
-	float a = 1 - smoothstep(0.0f, 0.05f, abs(pixelDepth - focusDepth));
-	out_colour = a * texture(sampler_texture, pixelCoord);
+	float pixelDepth = (-p34 / (p33 + texelFetch(sampler_depth, depthCoord)));
+
+
+	float CoC = abs(
+
+		);
+
+
+	float a = smoothstep(0.0f, 50.0f, 50.0f - abs(pixelDepth - focusDepth));
+	out_colour = texture(sampler_texture, pixelCoord) * a;
 	/*if (abs(pixelDepth - focusDepth) < 0.05)
 	{
 		

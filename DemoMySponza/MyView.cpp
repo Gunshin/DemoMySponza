@@ -997,7 +997,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
         glDisable(GL_BLEND); // disable blending
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, lbufferTO);
+        glBindTexture(GL_TEXTURE_2D, depthPassTO);
         glUniform1i(glGetUniformLocation(fxaaProgram.getProgramID(), "uSourceTex"), 0);
 
         glUniform2f(glGetUniformLocation(fxaaProgram.getProgramID(), "RCPFrame"), float(1.0 / float(_width)), float(1.0 / float(_height)));
@@ -1142,6 +1142,8 @@ void MyView::GenerateShaderPrograms()
 		depthProgram.linkProgram();
 
 		depthProgram.useProgram();
+
+		glUniform2f(glGetUniformLocation(depthProgram.getProgramID(), "near_far"), float(scene_->getCamera().getNearPlaneDistance()), float(scene_->getCamera().getFarPlaneDistance()));
 	}
 
 }

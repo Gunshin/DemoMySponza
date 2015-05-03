@@ -13,10 +13,10 @@ void main(void)
 
 	float depthTotal = 0;
 
-	for (int i = -1; i < 2; ++i)
+	for (int i = -32; i < 32; ++i)
 	{
 
-		for (int j = -1; j < 2; ++j)
+		for (int j = -32; j < 32; ++j)
 		{
 
 			depthTotal += texelFetch(sampler_depth, ivec2(i, j) + centre).r;
@@ -25,6 +25,6 @@ void main(void)
 
 	}
 
-	out_colour = vec4(depthTotal / 9, 0, 0, 0);
+	out_colour = vec4(depthTotal / (64 * 64), 0, 0, 0);
 
 }
