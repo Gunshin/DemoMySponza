@@ -991,18 +991,6 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
 			depthProgram.useProgram();
 
-			float near = scene_->getCamera().getNearPlaneDistance(); // 1
-			float far = scene_->getCamera().getFarPlaneDistance(); // 1000
-
-			// p33 (1000 + 1) / (1 - 1000)
-			// p33 (1001) / (-999)
-			// p33 == -1.002002002
-
-			// p34 (-2 * far * near) / (far - near)
-			// p34 (-2000) / (999)
-			// p34 == -2.002002002
-
-			glUniform2f(glGetUniformLocation(depthProgram.getProgramID(), "p"), float((far + near) / (near - far)), float(((-2 * far) * near) / (far - near)));
 
 			glDisable(GL_BLEND); // disable blending
 
@@ -1238,6 +1226,12 @@ void MyView::GenerateShaderPrograms()
 		depthProgram.linkProgram();
 
 		depthProgram.useProgram();
+
+
+        float near = scene_->getCamera().getNearPlaneDistance(); // 1
+        float far = scene_->getCamera().getFarPlaneDistance(); // 1000
+
+        glUniform2f(glGetUniformLocation(depthProgram.getProgramID(), "p"), float((far + near) / (near - far)), float(((-2 * far) * near) / (far - near)));
 
 	}
 

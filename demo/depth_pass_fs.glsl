@@ -13,13 +13,13 @@ uniform int horizontal;
 out vec4 out_colour;
 
 // using 
-float lensDiameter = 0.1f;
-float focalDepth = 3.0f;
-int numSamples = 1;
+float lensDiameter = 20.0f;
+float focalDepth = 2.1f;
+int numSamples = 5;
 
 float LinearDepth(float d_)
 {
-	return (-p.y / (p.x * d_)) * 100;
+	return (-p.y / (p.x * d_));
 }
 
 float CoC(float focalDistance_, float samplePixelDistance_)
@@ -27,12 +27,6 @@ float CoC(float focalDistance_, float samplePixelDistance_)
 	return abs(
 		lensDiameter * (focalDepth * ((focalDistance_ - samplePixelDistance_) / (samplePixelDistance_ * (focalDistance_ - focalDepth))))
 		);
-
-	// (samplePixelDistance_ * (focalDistance_ - focalDepth)) == -2 * (2 - 2.1) = -0.2
-	// (focalDistance_ - samplePixelDistance_) == 2 - -2 = 4
-	//((focalDistance_ - samplePixelDistance_) / (samplePixelDistance_ * (focalDistance_ - focalDepth))) == 4 / -1 = -4
-	// 3 * 2 == 6
-	// 50 * 6 == 300
 }
 
 float OverlapFunc(float pCoCRadius_, float pDistanceFromCenter_, float pp1DistanceFromCenter_)
@@ -51,7 +45,7 @@ float OverlapFunc(float pCoCRadius_, float pDistanceFromCenter_, float pp1Distan
 
 float IntensityFunc(float radius_)
 {
-	return 1 / ((radius_ * radius_) + 0.05f);
+	return min(1 / ((radius_ * radius_) + 0.05f), 1.0f);
 }
 
 float IntensityLeakageControlFunc(float samplePixelDepth_, float focalDistance_, float centerPixelCoC_)
@@ -59,7 +53,7 @@ float IntensityLeakageControlFunc(float samplePixelDepth_, float focalDistance_,
 	// potential performance improvement with 'step'
 	if (samplePixelDepth_ > focalDistance_)
 	{
-		centerPixelCoC_;
+		return centerPixelCoC_;
 	}
 	
 	return 1;
@@ -74,13 +68,9 @@ void main(void)
 	vec2 pixelCoord = vec2(gl_FragCoord.xy / textureSize(sampler_texture, 0));
 	ivec2 depthCoord = ivec2(gl_FragCoord.xy);
 
-	float focalDistance = -1 * LinearDepth(texelFetch(sampler_focus_depth, ivec2(0, 0))); // only one pixel in this sampler
-	//float focalDistance = -100.0f;
+	float focalDistance = LinearDepth(texelFetch(sampler_focus_depth, ivec2(0, 0))); // only one pixel in this sampler
 
 	float currentPixelDistance = LinearDepth(texelFetch(sampler_depth, depthCoord)); // temp distance
-
-	// focalDistance = 2
-	//currentPixelDistance = -2
 
 	float sampleCenterPixelCoC = CoC(focalDistance, currentPixelDistance);
 
@@ -105,16 +95,15 @@ void main(void)
 		vec3 samplePixelColour = texture(sampler_texture, samplerCoord).xyz;
 
 
-		float samplePixelOverlap = OverlapFunc(samplePixelCoC, abs(i * 0.0000001f), abs((i + 1) * 0.0000001f));
+        float samplePixelOverlap = OverlapFunc(samplePixelCoC, abs(i) * 0.1f, (abs(i) + 1) * 0.1f);
 
-		float samplePixelIntensity = IntensityFunc(samplePixelCoC);
+		float samplePixelIntensity = 1 - IntensityFunc(samplePixelCoC);
 
 		float samplePixelLeakage = IntensityLeakageControlFunc(samplePixelDistance, focalDistance, sampleCenterPixelCoC);
 
 
 
 		float sampleWeight = samplePixelOverlap * samplePixelIntensity * samplePixelLeakage;
-		//float sampleWeight = samplePixelOverlap;
 		totalWeight += sampleWeight;
 
 		centerPixelColour += samplePixelColour * sampleWeight;
@@ -122,11 +111,6 @@ void main(void)
 	}
 
 	centerPixelColour /= totalWeight;
-	out_colour = vec4(focalDistance, currentPixelDistance, sampleCenterPixelCoC, 1);
-
-
-	//out_colour = vec4(focalDistance, currentPixelDistance, sampleCenterPixelCoC, totalWeight);
-	
-	//out_colour = texture(sampler_texture, vec2((gl_FragCoord.xy + ivec2(1 * horizontal, 1 * vertical)) / textureSize(sampler_texture, 0)));
+    out_colour = vec4(centerPixelColour, 1);
 
 }
