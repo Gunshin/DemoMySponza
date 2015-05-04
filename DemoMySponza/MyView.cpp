@@ -68,6 +68,11 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 	std::cout << "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE." << std::endl;
 	std::cout << "" << std::endl;
 	std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    std::cout << "\n\n\n" << std::endl;
+
+    std::cout << "To turn DoF rendering off/on, press 'T'" << std::endl;
+
+    std::cout << "\n\n\n" << std::endl;
 
 	GenerateShaderPrograms();
 

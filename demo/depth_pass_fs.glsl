@@ -12,8 +12,15 @@ uniform int horizontal;
 
 out vec4 out_colour;
 
-// using 
-float lensDiameter = 20.0f;
+
+/*
+
+the lens diameter below is a bit dodgy. with smaller values of ~10-20 it works much better on close up objects,
+however a larger lens diameter like 160 set below, works much better for defining objects further away.
+
+*/
+
+float lensDiameter = 160.0f;
 float focalDepth = 2.1f;
 int numSamples = 5;
 
