@@ -199,5 +199,11 @@
     <None Include="..\demo\depth_pass_vs.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\demo\shadow_depth_pass_fs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\demo\shadow_depth_pass_vs.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

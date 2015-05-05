@@ -17,13 +17,17 @@ layout(std140, binding = 0) buffer BufferRender
 
 layout (location = 0) in vec3 vertexPosition;
 layout (location = 1) in vec3 vertexNormal;
-layout (location = 2) in vec3 lightPosition;
-layout (location = 3) in float coneAngleDegrees;
-layout (location = 4) in vec3 direction;
-layout (location = 5) in float range;
-layout (location = 6) in vec3 intensity;
+
+uniform vec3 lightPosition;
+uniform float coneAngleDegrees;
+uniform vec3 direction;
+uniform float range;
+uniform vec3 intensity;
+
+uniform mat4 shadowBiasProjectionViewMat;
 
 out Light vs_light;
+out vec4 vs_shadow_coord;
 
 void main(void)
 {
@@ -32,9 +36,13 @@ void main(void)
     light.position = lightPosition;
     light.range = range;
     light.direction = direction;
-    light.half_cone_angle_degrees = coneAngleDegrees;
+    light.half_cone_angle_degrees = coneAngleDegrees / 2;
     light.intensity = intensity;
     vs_light = light;
 
-	gl_Position = projectionViewMat * vec4((vertexPosition * range) + lightPosition, 1.0);
+    vec4 modelSpace = vec4((vertexPosition * range) + lightPosition, 1.0);
+
+    gl_Position = projectionViewMat * modelSpace;
+
+    vs_shadow_coord = shadowBiasProjectionViewMat * modelSpace;
 }

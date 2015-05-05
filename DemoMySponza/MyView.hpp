@@ -105,6 +105,7 @@ private:
     GLuint bufferDirectionalLights;
 
     ShaderProgram pointLightProgram, spotLightProgram, firstPassProgram, globalLightProgram, backgroundProgram, fxaaProgram, depthPrePassProgram, depthProgram;
+    ShaderProgram shadowDepthPass;
 
     GLuint gbufferFBO;
     GLuint gbufferTO[3];
@@ -113,6 +114,9 @@ private:
     GLuint lbufferFBO;
     GLuint lbufferTO;
     GLuint lbufferColourRBO;
+
+    GLuint shadowDepthFBO;
+    GLuint shadowDepthTO;
 
 	GLuint depthPrePassFBO;
 	GLuint depthPrePassTO;

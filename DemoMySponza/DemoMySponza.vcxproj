@@ -162,6 +162,8 @@
     <None Include="..\demo\global_light_vs.glsl" />
     <None Include="..\demo\pointlight_fs.glsl" />
     <None Include="..\demo\pointlight_vs.glsl" />
+    <None Include="..\demo\shadow_depth_pass_fs.glsl" />
+    <None Include="..\demo\shadow_depth_pass_vs.glsl" />
     <None Include="..\demo\spotlight_fs.glsl" />
     <None Include="..\demo\spotlight_vs.glsl" />
   </ItemGroup>

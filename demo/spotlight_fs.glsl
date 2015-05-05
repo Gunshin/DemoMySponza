@@ -22,7 +22,11 @@ uniform sampler2DRect sampler_world_position;
 uniform sampler2DRect sampler_world_normal;
 uniform sampler2DRect sampler_world_mat;
 
+uniform sampler2D shadow_depths;
+
 in Light vs_light;
+
+in vec4 vs_shadow_coord;
 
 out vec3 reflected_light;
 
@@ -36,10 +40,17 @@ void main(void)
 
 	vec3 V = normalize(camPosition - position);
 
+    float visibility = 1.0f;
+    if (texture(shadow_depths, vs_shadow_coord.xy).z  <  vs_shadow_coord.z)
+    {
+        visibility = 0.5f;
+    }
+
 	vec3 col = vec3(0,0,0);
     col += calculateColour(vs_light, matColour.rgb, matColour.a, V, position, normal);
 
-	reflected_light = col * vs_light.intensity;
+    reflected_light = visibility * col * vs_light.intensity;
+    
 }
 
 vec3 calculateColour(Light light_, vec3 materialColour_, float shininess_, vec3 V_, vec3 pos_, vec3 normal_)
