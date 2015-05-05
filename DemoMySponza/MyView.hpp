@@ -25,6 +25,8 @@ public:
     setScene(std::shared_ptr<const SceneModel::Context> scene);
 
 	void ToggleDoF();
+	void ToggleShadows();
+	void ToggleAA();
 
 private:
 
@@ -141,7 +143,7 @@ private:
     void GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_);
 
 	
-	bool dof = false;
+	bool dof = false, AA = false, shadows = false;
 
     std::shared_ptr<QueryTimer> gbufferTimer, backgroundTimer, globalLightsTimer, lbufferTimer, postTimer;
     std::vector<GLuint64> gbufferTimes, backgroundTimes, globalLightsTimes, lbufferTimes, postTimes;

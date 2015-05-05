@@ -120,6 +120,12 @@ windowControlKeyboardChanged(std::shared_ptr<tygra::Window> window,
 	case 'T':
 		view_->ToggleDoF();
 		break;
+	case 'Y':
+		view_->ToggleShadows();
+		break;
+	case 'U':
+		view_->ToggleAA();
+		break;
     }
 }
 

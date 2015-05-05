@@ -71,6 +71,8 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 	std::cout << "\n\n\n" << std::endl;
 
 	std::cout << "To turn DoF rendering off/on, press 'T'" << std::endl;
+	std::cout << "To turn Shadows rendering off/on, press 'Y'" << std::endl;
+	std::cout << "To turn FXAA rendering off/on, press 'U'" << std::endl;
 
 	std::cout << "\n\n\n" << std::endl;
 
@@ -1008,7 +1010,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
 			glm::mat4 finalLightProjectionMatrix;
 
-			if (spotLights[i].getCastShadow())
+			if (spotLights[i].getCastShadow() && shadows)
 			{
 				glViewport(0, 0, 1024, 1024);
 				shadowDepthPass.useProgram();
@@ -1073,7 +1075,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
 			glUniformMatrix4fv(glGetUniformLocation(spotLightProgram.getProgramID(), "shadowProjectionViewMat"), 1, GL_FALSE, glm::value_ptr(finalLightProjectionMatrix));
 
-			glUniform1i(glGetUniformLocation(spotLightProgram.getProgramID(), "shadows"), spotLights[i].getCastShadow() ? 1 : 0);
+			glUniform1i(glGetUniformLocation(spotLightProgram.getProgramID(), "shadows"), spotLights[i].getCastShadow() && shadows ? 1 : 0);
 
 
 			glBindVertexArray(spotLightMesh.vao);
@@ -1193,10 +1195,16 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
 		}
 	}
+	else
+	{
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, lbufferFBO);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, depthVerticalPassFBO);
+		glBlitFramebuffer(0, 0, viewport_size[2], viewport_size[3], 0, 0, viewport_size[2], viewport_size[3], GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	}
 	//int postProcessTimeID = postTimer->Start();
 
 	//postTimer->End(postProcessTimeID);
-
+	if (AA)
 	{
 		// fxaa
 		fxaaProgram.useProgram();
@@ -1208,10 +1216,10 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
 		glDisable(GL_BLEND); // disable blending
 
-		GLuint textureToDraw = dof ? depthVerticalPassTO : lbufferTO;
+		//GLuint textureToDraw = dof ? depthVerticalPassTO : lbufferTO;
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, textureToDraw);
+		glBindTexture(GL_TEXTURE_2D, depthVerticalPassTO);
 		glUniform1i(glGetUniformLocation(fxaaProgram.getProgramID(), "uSourceTex"), 0);
 
 		glUniform2f(glGetUniformLocation(fxaaProgram.getProgramID(), "RCPFrame"), float(1.0 / float(_width)), float(1.0 / float(_height)));
@@ -1223,6 +1231,12 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 			TGL_BUFFER_OFFSET(globalLightMesh.startElementIndex * sizeof(int)),
 			globalLightMesh.startVerticeIndex);
 
+	}
+	else
+	{
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, depthVerticalPassFBO);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fxaaFBO);
+		glBlitFramebuffer(0, 0, viewport_size[2], viewport_size[3], 0, 0, viewport_size[2], viewport_size[3], GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	}
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fxaaFBO);
@@ -1315,10 +1329,6 @@ void MyView::GenerateShaderPrograms()
 
 		spotLightProgram.useProgram();
 
-		float near = scene_->getCamera().getNearPlaneDistance(); // 1
-		float far = scene_->getCamera().getFarPlaneDistance(); // 1000
-
-		glUniform2f(glGetUniformLocation(spotLightProgram.getProgramID(), "p"), float((far + near) / (near - far)), float(((-2 * far) * near) / (far - near)));
 	}
 
 	{
@@ -1546,4 +1556,14 @@ void MyView::GenerateMeshes(const std::vector<SceneModel::Mesh> &meshes_)
 void MyView::ToggleDoF()
 {
 	dof = !dof;
+}
+
+void MyView::ToggleShadows()
+{
+	shadows = !shadows;
+}
+
+void MyView::ToggleAA()
+{
+	AA = !AA;
 }
