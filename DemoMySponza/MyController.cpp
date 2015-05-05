@@ -118,7 +118,7 @@ windowControlKeyboardChanged(std::shared_ptr<tygra::Window> window,
         scene_->toggleCameraAnimation();
         break;
 	case 'T':
-		drawDoF = !drawDoF;
+		view_->ToggleDoF();
 		break;
     }
 }
@@ -205,10 +205,4 @@ updateCameraTranslation()
         - key_speed * camera_move_speed_[3];
     scene_->getCamera().setLinearVelocity(
         glm::vec3(sideward_speed, 0, forward_speed));
-}
-
-
-bool MyController::getDrawDoF() const
-{
-	return drawDoF;
 }

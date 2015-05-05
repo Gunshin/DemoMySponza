@@ -25,7 +25,6 @@ uniform float range;
 uniform vec3 intensity;
 
 out Light vs_light;
-out vec4 vs_model_space;
 
 void main(void)
 {
@@ -39,8 +38,6 @@ void main(void)
     vs_light = light;
 
     vec4 modelSpace = vec4((vertexPosition * range) + lightPosition, 1.0);
-
-	vs_model_space = modelSpace;
 
     gl_Position = projectionViewMat * modelSpace;
 }

@@ -22,13 +22,13 @@ uniform sampler2DRect sampler_world_position;
 uniform sampler2DRect sampler_world_normal;
 uniform sampler2DRect sampler_world_mat;
 
-uniform sampler2D shadow_depths;
+uniform sampler2DRect shadow_depths;
 
-uniform mat4 shadowBiasProjectionViewMat;
+uniform mat4 shadowProjectionViewMat;
+
+uniform int shadows;
 
 in Light vs_light;
-
-in vec4 vs_model_space;
 
 out vec3 reflected_light;
 
@@ -42,23 +42,32 @@ void main(void)
 
 	vec3 V = normalize(camPosition - position);
 
-	vec4 shadowCoord = shadowBiasProjectionViewMat * vec4(position, 1.0f);
+	float visibility = 1.0f;
 
-	vec3 finalShadowCoord = shadowCoord.xyz / shadowCoord.w;
+	if (shadows == 1)
+	{
+		vec4 lightCoord = shadowProjectionViewMat * vec4(position, 1.0f);
 
-	vec2 lastShadowCoord = vec2(finalShadowCoord.xy / textureSize(shadow_depths, 0));
+		lightCoord.xyz = ((lightCoord.xyz / lightCoord.w) + 1.0f) * 0.5f;
 
-    float visibility = 1.0f;
-	if (texture(shadow_depths, lastShadowCoord.xy).r  <  finalShadowCoord.z)
-    {
-        visibility = 0.0f;
-    }
+		ivec2 lastLightCoord = ivec2(lightCoord.xy * textureSize(shadow_depths, 0));
 
-	vec3 col = vec3(0,0,0);
-    col += calculateColour(vs_light, matColour.rgb, matColour.a, V, position, normal);
+		float distanceToLight = texelFetch(shadow_depths, lastLightCoord).r;
+
+
+		if (distanceToLight - 0.0001f < lightCoord.z)
+		{
+			visibility = 0.0f;
+		}
+
+		//reflected_light = vec3(distanceToLight, lightCoord.z, visibility);
+	}
+
+	vec3 col = calculateColour(vs_light, matColour.rgb, matColour.a, V, position, normal);
 
     reflected_light = visibility * col * vs_light.intensity;
-    
+
+	
 }
 
 vec3 calculateColour(Light light_, vec3 materialColour_, float shininess_, vec3 V_, vec3 pos_, vec3 normal_)
