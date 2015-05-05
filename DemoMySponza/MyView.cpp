@@ -1018,7 +1018,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
             if (spotLights[i].getCastShadow())
             {
-
+				glViewport(0, 0, 1024, 1024);
                 shadowDepthPass.useProgram();
 
                 glBindFramebuffer(GL_FRAMEBUFFER, shadowDepthFBO);
@@ -1032,8 +1032,8 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
                 glDisable(GL_BLEND);
                 glEnable(GL_CULL_FACE);
 
-                glm::mat4 projectionMatrix = glm::perspective(75.f, aspectRatio, 1.f, 1000.f);
-                glm::mat4 viewMatrix = glm::lookAt(spotLights[i].getPosition(), spotLights[i].getPosition() + spotLights[i].getDirection(), glm::vec3(0, 1, 0));
+				glm::mat4 projectionMatrix = glm::perspective(spotLights[i].getConeAngleDegrees(), 1.0f, 1.0f, spotLights[i].getRange());
+                glm::mat4 viewMatrix = glm::lookAt(spotLights[i].getPosition(), spotLights[i].getPosition() - spotLights[i].getDirection(), glm::vec3(0, 1, 0));
                 glm::mat4 projectionViewMatrix = projectionMatrix * viewMatrix;
                 finalLightProjectionMatrix = biasMat * projectionMatrix;
 
@@ -1054,7 +1054,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
                 glEnable(GL_BLEND);
                 glDisable(GL_CULL_FACE);
-
+				glViewport(0, 0, _width, _height);
             }
 
             spotLightProgram.useProgram();

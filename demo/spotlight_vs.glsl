@@ -24,10 +24,8 @@ uniform vec3 direction;
 uniform float range;
 uniform vec3 intensity;
 
-uniform mat4 shadowBiasProjectionViewMat;
-
 out Light vs_light;
-out vec4 vs_shadow_coord;
+out vec4 vs_model_space;
 
 void main(void)
 {
@@ -42,7 +40,7 @@ void main(void)
 
     vec4 modelSpace = vec4((vertexPosition * range) + lightPosition, 1.0);
 
-    gl_Position = projectionViewMat * modelSpace;
+	vs_model_space = modelSpace;
 
-    vs_shadow_coord = shadowBiasProjectionViewMat * modelSpace;
+    gl_Position = projectionViewMat * modelSpace;
 }

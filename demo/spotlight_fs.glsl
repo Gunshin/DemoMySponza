@@ -24,9 +24,11 @@ uniform sampler2DRect sampler_world_mat;
 
 uniform sampler2D shadow_depths;
 
+uniform mat4 shadowBiasProjectionViewMat;
+
 in Light vs_light;
 
-in vec4 vs_shadow_coord;
+in vec4 vs_model_space;
 
 out vec3 reflected_light;
 
@@ -40,10 +42,16 @@ void main(void)
 
 	vec3 V = normalize(camPosition - position);
 
+	vec4 shadowCoord = shadowBiasProjectionViewMat * vec4(position, 1.0f);
+
+	vec3 finalShadowCoord = shadowCoord.xyz / shadowCoord.w;
+
+	vec2 lastShadowCoord = vec2(finalShadowCoord.xy / textureSize(shadow_depths, 0));
+
     float visibility = 1.0f;
-    if (texture(shadow_depths, vs_shadow_coord.xy).z  <  vs_shadow_coord.z)
+	if (texture(shadow_depths, lastShadowCoord.xy).r  <  finalShadowCoord.z)
     {
-        visibility = 0.5f;
+        visibility = 0.0f;
     }
 
 	vec3 col = vec3(0,0,0);
