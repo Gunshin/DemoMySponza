@@ -60,14 +60,12 @@ void main(void)
 			visibility = 0.0f;
 		}
 
-		//reflected_light = vec3(distanceToLight, lightCoord.z, visibility);
 	}
 
 	vec3 col = calculateColour(vs_light, matColour.rgb, matColour.a, V, position, normal);
 
     reflected_light = visibility * col * vs_light.intensity;
 
-	
 }
 
 vec3 calculateColour(Light light_, vec3 materialColour_, float shininess_, vec3 V_, vec3 pos_, vec3 normal_)

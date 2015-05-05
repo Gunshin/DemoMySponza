@@ -392,7 +392,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
 		average /= gbufferTimes.size();
 
-		//printf("gbuffer took: %llu\n", average);
+		logger.Log(std::to_string(average));
 	});
 
 	backgroundTimes.resize(rollingAverage);
@@ -412,7 +412,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
 		average /= backgroundTimes.size();
 
-		//printf("background took: %llu\n", average);
+		logger.Log(std::to_string(average));
 	});
 
 	globalLightsTimes.resize(rollingAverage);
@@ -432,7 +432,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
 		average /= globalLightsTimes.size();
 
-		//printf("globalLights took: %llu\n", average);
+		logger.Log(std::to_string(average));
 	});
 
 	lbufferTimes.resize(rollingAverage);
@@ -452,7 +452,7 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
 		average /= lbufferTimes.size();
 
-		//printf("lbuffer took: %llu\n", average);
+		logger.Log(std::to_string(average));
 	});
 
 	postTimes.resize(rollingAverage);
@@ -472,8 +472,49 @@ windowViewWillStart(std::shared_ptr<tygra::Window> window)
 
 		average /= postTimes.size();
 
-		//printf("post took: %llu\n", average);
+		logger.Log(std::to_string(average));
 	});
+
+	dofTimes.resize(rollingAverage);
+	dofTimer = std::make_shared<QueryTimer>([this, rollingAverage](GLuint64 startTime_, GLuint64 endTime_)->void
+	{
+		for (unsigned int i = 0; i < dofTimes.size() - 1; ++i)
+		{
+			dofTimes[i] = dofTimes[i + 1];
+		}
+		dofTimes[rollingAverage - 1] = endTime_ - startTime_;
+
+		GLuint64 average = 0;
+		for (unsigned int i = 0; i < dofTimes.size(); ++i)
+		{
+			average += dofTimes[i];
+		}
+
+		average /= dofTimes.size();
+
+		logger.Log(std::to_string(average));
+	});
+
+	spotLightTimes.resize(rollingAverage);
+	spotLightTimer = std::make_shared<QueryTimer>([this, rollingAverage](GLuint64 startTime_, GLuint64 endTime_)->void
+	{
+		for (unsigned int i = 0; i < spotLightTimes.size() - 1; ++i)
+		{
+			spotLightTimes[i] = spotLightTimes[i + 1];
+		}
+		spotLightTimes[rollingAverage - 1] = endTime_ - startTime_;
+
+		GLuint64 average = 0;
+		for (unsigned int i = 0; i < spotLightTimes.size(); ++i)
+		{
+			average += spotLightTimes[i];
+		}
+
+		average /= spotLightTimes.size();
+
+		logger.Log(std::to_string(average));
+	});
+
 
 }
 
@@ -620,11 +661,6 @@ int height)
 			GL_FLOAT,
 			NULL
 			);
-
-		/*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);*/
 
 		glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
@@ -804,27 +840,41 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 {
 	assert(scene_ != nullptr);
 
+	glm::vec3 p = scene_->getCamera().getPosition();
+	glm::vec3 d = scene_->getCamera().getDirection();
+
+
 	glClearColor(0.f, 0.f, 0.25f, 0.f);
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	GLint viewport_size[4];
 	glGetIntegerv(GL_VIEWPORT, viewport_size);
 
-	/*glm::mat4 projectionMatrix = glm::perspective(75.f, aspectRatio, 1.f, 1000.f);
-	glm::mat4 viewMatrix = glm::lookAt(scene_->getCamera().getPosition(), scene_->getCamera().getDirection() + scene_->getCamera().getPosition(), glm::vec3(0, 1, 0));
-	glm::mat4 projectionViewMatrix = projectionMatrix * viewMatrix;*/
+	if (runningProfiler)
+	{
+		if (currentRun > maxRuns)
+		{
+			runningProfiler = false;
+			logger.Close();
+		}
+		else
+		{
+			gbufferTimer->Check();
+			backgroundTimer->Check();
+			globalLightsTimer->Check();
+			lbufferTimer->Check();
+			spotLightTimer->Check();
+			dofTimer->Check();
+			postTimer->Check();
 
-	gbufferTimer->Check();
-	backgroundTimer->Check();
-	globalLightsTimer->Check();
-	lbufferTimer->Check();
-	postTimer->Check();
-
+			logger.Flush();
+			currentRun++;
+		}
+	}
+	
 	int gbufferTimeID = gbufferTimer->Start();
 	renderSSBO.FillData();
 	vboInstances[0].FillData();
-
-
 
 	// set up the depth and stencil buffers, we are not writing to the onscreen framebuffer, we are filling the relevant data for the light render
 	{
@@ -979,6 +1029,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 	}
 	lbufferTimer->End(lbufferTimeID);
 
+	int spotLightTimeID = spotLightTimer->Start();
 	{
 
 		spotLightProgram.useProgram();
@@ -1088,17 +1139,6 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 
 		}
 
-		//vboSpotLight.FillData();
-
-		//// instance draw the lights woop woop
-		//glBindVertexArray(spotLightMesh.vao);
-		//glDrawElementsInstancedBaseVertex(GL_TRIANGLES,
-		//	spotLightMesh.element_count,
-		//	GL_UNSIGNED_INT,
-		//	TGL_BUFFER_OFFSET(spotLightMesh.startElementIndex * sizeof(int)),
-		//	scene_->getAllSpotLights().size(),
-		//	spotLightMesh.startVerticeIndex);
-
 		glDisable(GL_STENCIL_TEST);
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LEQUAL);
@@ -1106,7 +1146,9 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 		glDisable(GL_CULL_FACE);
 		glCullFace(GL_BACK);
 	}
+	spotLightTimer->End(spotLightTimeID);
 
+	int dofID = dofTimer->Start();
 	if (dof)
 	{
 
@@ -1201,9 +1243,9 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, depthVerticalPassFBO);
 		glBlitFramebuffer(0, 0, viewport_size[2], viewport_size[3], 0, 0, viewport_size[2], viewport_size[3], GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	}
-	//int postProcessTimeID = postTimer->Start();
+	dofTimer->End(dofID);
 
-	//postTimer->End(postProcessTimeID);
+	int postProcessTimeID = postTimer->Start();
 	if (AA)
 	{
 		// fxaa
@@ -1238,6 +1280,7 @@ windowViewRender(std::shared_ptr<tygra::Window> window)
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fxaaFBO);
 		glBlitFramebuffer(0, 0, viewport_size[2], viewport_size[3], 0, 0, viewport_size[2], viewport_size[3], GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	}
+	postTimer->End(postProcessTimeID);
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, fxaaFBO);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -1566,4 +1609,13 @@ void MyView::ToggleShadows()
 void MyView::ToggleAA()
 {
 	AA = !AA;
+}
+
+void MyView::RunProfiling()
+{
+	runningProfiler = true;
+	logger.Open();
+
+	currentRun = 0;
+
 }

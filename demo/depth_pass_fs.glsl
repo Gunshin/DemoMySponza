@@ -18,6 +18,8 @@ out vec4 out_colour;
 the lens diameter below is a bit dodgy. with smaller values of ~10-20 it works much better on close up objects,
 however a larger lens diameter like 160 set below, works much better for defining objects further away.
 
+this whole dof has been based on http://onlinelibrary.wiley.com/doi/10.1111/j.1467-8659.2007.00935.x/pdf
+
 */
 
 float lensDiameter = 160.0f;

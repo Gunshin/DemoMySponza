@@ -12,6 +12,7 @@
 #include "SSBO.hpp"
 #include "MeshBuffer.hpp"
 #include "VBO.hpp"
+#include "Logger.hpp"
 
 class MyView : public tygra::WindowViewDelegate
 {
@@ -27,6 +28,7 @@ public:
 	void ToggleDoF();
 	void ToggleShadows();
 	void ToggleAA();
+	void RunProfiling();
 
 private:
 
@@ -48,6 +50,12 @@ private:
 
     int _width, _height; // instead of renaming parameters, im breaking my naming convention >=[
     float aspectRatio;
+
+	Logger logger;
+	int maxRuns = 20;
+	int currentRun = 100;
+	bool runningProfiler = false;
+
 
     MeshBuffer meshBuffer;
 
@@ -145,7 +153,7 @@ private:
 	
 	bool dof = false, AA = false, shadows = false;
 
-    std::shared_ptr<QueryTimer> gbufferTimer, backgroundTimer, globalLightsTimer, lbufferTimer, postTimer;
-    std::vector<GLuint64> gbufferTimes, backgroundTimes, globalLightsTimes, lbufferTimes, postTimes;
+    std::shared_ptr<QueryTimer> gbufferTimer, backgroundTimer, globalLightsTimer, lbufferTimer, postTimer, dofTimer, spotLightTimer;
+    std::vector<GLuint64> gbufferTimes, backgroundTimes, globalLightsTimes, lbufferTimes, postTimes, dofTimes, spotLightTimes;
 
 };

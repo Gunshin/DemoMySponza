@@ -115,6 +115,7 @@
     <ClCompile Include="..\external\src\tgl\tgl.c" />
     <ClCompile Include="..\external\src\tygra\FileHelper.cpp" />
     <ClCompile Include="..\external\src\tygra\Window.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MeshBuffer.cpp" />
     <ClCompile Include="MyController.cpp" />
@@ -138,6 +139,7 @@
     <ClInclude Include="..\external\include\SceneModel\SceneModel_fwd.hpp" />
     <ClInclude Include="..\external\include\SceneModel\SpotLight.hpp" />
     <ClInclude Include="..\external\src\SceneModel\FirstPersonMovement.hpp" />
+    <ClInclude Include="Logger.hpp" />
     <ClInclude Include="MeshBuffer.hpp" />
     <ClInclude Include="SSBO.hpp" />
     <ClInclude Include="MyController.hpp" />

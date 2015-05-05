@@ -126,6 +126,9 @@ windowControlKeyboardChanged(std::shared_ptr<tygra::Window> window,
 	case 'U':
 		view_->ToggleAA();
 		break;
+	case 'G':
+		view_->RunProfiling();
+		break;
     }
 }
 
